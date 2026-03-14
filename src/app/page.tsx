@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -5,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, CheckCircle2 } from "lucide-react"
+import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,11 +18,19 @@ export default function LoginPage() {
   const [step, setStep] = React.useState<"login" | "2fa" | "register" | "verify-account">("login")
   const [otpCode, setOtpCode] = React.useState("")
   const [verifyCode, setVerifyCode] = React.useState("")
+  
+  // States for password visibility
+  const [showPassword, setShowPassword] = React.useState(false)
+  const [showRegPassword, setShowRegPassword] = React.useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
+
   const [formData, setFormData] = React.useState({
     email: "",
     password: "",
     confirmPassword: ""
   })
+
+  const passwordsMatch = formData.password === formData.confirmPassword || formData.confirmPassword === ""
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -174,11 +184,18 @@ export default function LoginPage() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="password" 
-                        type="password" 
+                        type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
-                        className="pl-10"
+                        className="pl-10 pr-10"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   <Button className="w-full h-11 group" disabled={loading} type="submit">
@@ -237,13 +254,20 @@ export default function LoginPage() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="reg-password" 
-                      type="password" 
+                      type={showRegPassword ? "text" : "password"} 
                       placeholder="••••••••" 
-                      className="pl-10"
+                      className="pl-10 pr-10"
                       required
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -252,16 +276,31 @@ export default function LoginPage() {
                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="confirm-password" 
-                      type="password" 
+                      type={showConfirmPassword ? "text" : "password"} 
                       placeholder="••••••••" 
-                      className="pl-10"
+                      className={cn(
+                        "pl-10 pr-10",
+                        !passwordsMatch && formData.confirmPassword !== "" && "border-destructive focus-visible:ring-destructive"
+                      )}
                       required
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                  {!passwordsMatch && formData.confirmPassword !== "" && (
+                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" /> As senhas não coincidem.
+                    </p>
+                  )}
                 </div>
-                <Button className="w-full h-11" disabled={loading} type="submit">
+                <Button className="w-full h-11" disabled={loading || !passwordsMatch || formData.confirmPassword === ""} type="submit">
                   {loading ? "Creating Vault..." : "Create Account"}
                   {!loading && <UserPlus className="ml-2 w-4 h-4" />}
                 </Button>
