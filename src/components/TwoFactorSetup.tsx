@@ -1,10 +1,9 @@
-
 "use client"
 
 import * as React from "react"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, Smartphone, ExternalLink, Download, CheckCircle2 } from "lucide-react"
+import { ShieldCheck, Smartphone, Download, CheckCircle2, Copy, Check } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 
@@ -17,10 +16,21 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   const { toast } = useToast()
   const [step, setStep] = React.useState(1)
   const [isEnabled, setIsEnabled] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
 
   // Em um app real, este segredo viria do backend do Firebase Auth ou Firestore
   const dummySecret = "JBSWY3DPEHPK3PXP"
   const otpAuthUrl = `otpauth://totp/PassGuard:user@example.com?secret=${dummySecret}&issuer=PassGuard`
+
+  const handleCopySecret = () => {
+    navigator.clipboard.writeText(dummySecret)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    toast({
+      title: "Copiado!",
+      description: "Chave manual copiada para a área de transferência.",
+    })
+  }
 
   const handleEnable = () => {
     setIsEnabled(true)
@@ -91,9 +101,14 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                 <QRCodeSVG value={otpAuthUrl} size={180} />
               </div>
 
-              <div className="w-full bg-muted/30 p-3 rounded text-center border border-dashed border-primary/30">
+              <div className="w-full bg-muted/30 p-3 rounded text-center border border-dashed border-primary/30 relative">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Chave Manual</p>
-                <code className="text-sm font-mono font-bold text-primary">{dummySecret}</code>
+                <div className="flex items-center justify-center gap-2">
+                  <code className="text-sm font-mono font-bold text-primary">{dummySecret}</code>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopySecret}>
+                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
               </div>
 
               <Button className="w-full" onClick={handleEnable}>Confirmar Ativação</Button>
