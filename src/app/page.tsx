@@ -27,12 +27,17 @@ export default function LoginPage() {
 
     // Simulação de verificação de credenciais
     setTimeout(() => {
+      // Verifica se o 2FA está ativado especificamente para este navegador/sessão
       const is2FAEnabled = localStorage.getItem("passguard_2fa_enabled") === "true"
       
       if (is2FAEnabled) {
         setStep("2fa")
         setLoading(false)
       } else {
+        toast({
+          title: "Cofre Aberto",
+          description: "Acesso autorizado com sucesso.",
+        })
         router.push("/dashboard")
       }
     }, 800)
@@ -52,12 +57,16 @@ export default function LoginPage() {
     setLoading(true)
     // Simulação de criação de conta
     setTimeout(() => {
+      // Resetar o 2FA para o novo usuário criado (importante para o MVP em localStorage)
+      localStorage.setItem("passguard_2fa_enabled", "false")
+      
       toast({
         title: "Conta criada!",
-        description: "Agora você pode acessar seu cofre seguro.",
+        description: "Sua conta foi registrada com segurança. Agora você pode fazer login.",
       })
       setStep("login")
       setLoading(false)
+      setFormData({ email: "", password: "", confirmPassword: "" })
     }, 1200)
   }
 
@@ -69,8 +78,8 @@ export default function LoginPage() {
     setTimeout(() => {
       if (otpCode.length === 6) {
         toast({
-          title: "Acesso Autorizado",
-          description: "Bem-vindo de volta ao seu cofre seguro.",
+          title: "Identidade Confirmada",
+          description: "Segunda camada de proteção validada.",
         })
         router.push("/dashboard")
       } else {
@@ -106,12 +115,12 @@ export default function LoginPage() {
             <CardTitle className="text-2xl font-headline">
               {step === "login" && "Welcome Back"}
               {step === "register" && "Create Account"}
-              {step === "2fa" && "Verificação de 2 Fatores"}
+              {step === "2fa" && "Dupla Proteção"}
             </CardTitle>
             <CardDescription>
               {step === "login" && "Enter your credentials to access your secure vault."}
               {step === "register" && "Join PassGuard and start protecting your digital life."}
-              {step === "2fa" && "Sua conta está protegida. Digite o código gerado no seu Google Authenticator."}
+              {step === "2fa" && "Digite o código gerado no seu Google Authenticator para continuar."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
