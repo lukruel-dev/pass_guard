@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound } from "lucide-react"
+import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
@@ -13,8 +13,13 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = React.useState(false)
-  const [step, setStep] = React.useState<"login" | "2fa">("login")
+  const [step, setStep] = React.useState<"login" | "2fa" | "register">("login")
   const [otpCode, setOtpCode] = React.useState("")
+  const [formData, setFormData] = React.useState({
+    email: "",
+    password: "",
+    confirmPassword: ""
+  })
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +36,29 @@ export default function LoginPage() {
         router.push("/dashboard")
       }
     }, 800)
+  }
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Erro no registro",
+        description: "As senhas não coincidem.",
+      })
+      return
+    }
+
+    setLoading(true)
+    // Simulação de criação de conta
+    setTimeout(() => {
+      toast({
+        title: "Conta criada!",
+        description: "Agora você pode acessar seu cofre seguro.",
+      })
+      setStep("login")
+      setLoading(false)
+    }, 1200)
   }
 
   const handleVerify2FA = (e: React.FormEvent) => {
@@ -76,16 +104,18 @@ export default function LoginPage() {
         <Card className="border-primary/10 shadow-2xl bg-card/80 backdrop-blur overflow-hidden">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">
-              {step === "login" ? "Welcome Back" : "Verificação de 2 Fatores"}
+              {step === "login" && "Welcome Back"}
+              {step === "register" && "Create Account"}
+              {step === "2fa" && "Verificação de 2 Fatores"}
             </CardTitle>
             <CardDescription>
-              {step === "login" 
-                ? "Enter your credentials to access your secure vault." 
-                : "Sua conta está protegida. Digite o código gerado no seu Google Authenticator."}
+              {step === "login" && "Enter your credentials to access your secure vault."}
+              {step === "register" && "Join PassGuard and start protecting your digital life."}
+              {step === "2fa" && "Sua conta está protegida. Digite o código gerado no seu Google Authenticator."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {step === "login" ? (
+            {step === "login" && (
               <>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -94,6 +124,7 @@ export default function LoginPage() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="email" 
+                        type="email"
                         placeholder="name@example.com" 
                         className="pl-10"
                         required
@@ -103,7 +134,7 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
-                      <Button variant="link" className="p-0 h-auto text-xs text-primary">Forgot password?</Button>
+                      <Button variant="link" type="button" className="p-0 h-auto text-xs text-primary">Forgot password?</Button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -147,7 +178,72 @@ export default function LoginPage() {
                   </Button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {step === "register" && (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="reg-email" 
+                      type="email"
+                      placeholder="name@example.com" 
+                      className="pl-10"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="reg-password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-10"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <div className="relative">
+                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="confirm-password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-10"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <Button className="w-full h-11" disabled={loading} type="submit">
+                  {loading ? "Creating Vault..." : "Create Account"}
+                  {!loading && <UserPlus className="ml-2 w-4 h-4" />}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  type="button" 
+                  className="w-full text-muted-foreground" 
+                  onClick={() => setStep("login")}
+                  disabled={loading}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Login
+                </Button>
+              </form>
+            )}
+
+            {step === "2fa" && (
               <form onSubmit={handleVerify2FA} className="space-y-6 py-2">
                 <div className="space-y-4">
                   <div className="flex justify-center">
@@ -192,7 +288,13 @@ export default function LoginPage() {
           {step === "login" && (
             <CardFooter className="flex flex-wrap justify-center text-sm text-muted-foreground">
               Don&apos;t have an account? 
-              <Button variant="link" className="p-0 h-auto ml-1 text-secondary">Create Account</Button>
+              <Button 
+                variant="link" 
+                className="p-0 h-auto ml-1 text-secondary"
+                onClick={() => setStep("register")}
+              >
+                Create Account
+              </Button>
             </CardFooter>
           )}
         </Card>
