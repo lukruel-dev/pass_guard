@@ -39,20 +39,16 @@ const generatePasswordPrompt = ai.definePrompt({
   input: { schema: GenerateCustomPasswordInputSchema },
   output: { schema: GenerateCustomPasswordOutputSchema },
   prompt: `You are a secure password generator. Your task is to create a strong, random password based on the user's specific requirements.
-The output MUST be a JSON object conforming to the following schema:
-\`\`\`json
-{{jsonSchema GenerateCustomPasswordOutputSchema}}
-\`\`\`
 
 The password must strictly adhere to the following criteria:
-- Total length: {{{length}}} characters.
-- Minimum special characters: {{{minSpecialChars}}} (use characters like !@#$%^&*()-_+=[]{}|;:,.<>/?).
-- Minimum uppercase letters: {{{minUppercase}}}.
-- Minimum lowercase letters: {{{minLowercase}}}.
-- Minimum digits: {{{minDigits}}}.
+- Total length: {{length}} characters.
+- Minimum special characters: {{minSpecialChars}} (use characters like !@#$%^&*()-_+=[]{}|;:,.<>/?).
+- Minimum uppercase letters: {{minUppercase}}.
+- Minimum lowercase letters: {{minLowercase}}.
+- Minimum digits: {{minDigits}}.
 
 The password should contain only ASCII characters. Ensure the password is entirely random and unpredictable.
-Do NOT include any other text, explanation, or formatting in your response, apart from the JSON object.`,
+Do NOT include any other text or explanation in your response. Return ONLY the required data format.`,
 });
 
 const generateCustomPasswordFlow = ai.defineFlow(
