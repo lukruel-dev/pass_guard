@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus } from "lucide-react"
+import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, CheckCircle2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
@@ -13,8 +13,9 @@ export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = React.useState(false)
-  const [step, setStep] = React.useState<"login" | "2fa" | "register">("login")
+  const [step, setStep] = React.useState<"login" | "2fa" | "register" | "verify-account">("login")
   const [otpCode, setOtpCode] = React.useState("")
+  const [verifyCode, setVerifyCode] = React.useState("")
   const [formData, setFormData] = React.useState({
     email: "",
     password: "",
@@ -55,26 +56,48 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    // Simulação de criação de conta
+    // Simulação de criação de conta e "envio" de código de verificação
     setTimeout(() => {
-      // Resetar o 2FA para o novo usuário criado (importante para o MVP em localStorage)
       localStorage.setItem("passguard_2fa_enabled", "false")
-      
       toast({
-        title: "Conta criada!",
-        description: "Sua conta foi registrada com segurança. Agora você pode fazer login.",
+        title: "Código Enviado!",
+        description: `Enviamos um código de confirmação para ${formData.email}`,
       })
-      setStep("login")
+      setStep("verify-account")
       setLoading(false)
-      setFormData({ email: "", password: "", confirmPassword: "" })
     }, 1200)
+  }
+
+  const handleConfirmVerification = (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    // Simulação de validação do código de e-mail/sms
+    setTimeout(() => {
+      if (verifyCode.length === 6) {
+        toast({
+          title: "Conta Verificada!",
+          description: "Seu e-mail foi confirmado com sucesso. Agora você pode acessar o cofre.",
+        })
+        setStep("login")
+        setLoading(false)
+        setVerifyCode("")
+      } else {
+        setLoading(false)
+        toast({
+          variant: "destructive",
+          title: "Código Inválido",
+          description: "O código de verificação está incorreto.",
+        })
+      }
+    }, 800)
   }
 
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulação de validação do código OTP
+    // Simulação de validação do código OTP (Google Authenticator)
     setTimeout(() => {
       if (otpCode.length === 6) {
         toast({
@@ -87,7 +110,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "Código Inválido",
-          description: "O código inserido está incorreto. Tente novamente.",
+          description: "O código do autenticador está incorreto.",
         })
       }
     }, 800)
@@ -116,11 +139,13 @@ export default function LoginPage() {
               {step === "login" && "Welcome Back"}
               {step === "register" && "Create Account"}
               {step === "2fa" && "Dupla Proteção"}
+              {step === "verify-account" && "Verifique sua Conta"}
             </CardTitle>
             <CardDescription>
               {step === "login" && "Enter your credentials to access your secure vault."}
               {step === "register" && "Join PassGuard and start protecting your digital life."}
               {step === "2fa" && "Digite o código gerado no seu Google Authenticator para continuar."}
+              {step === "verify-account" && `Digite o código de 6 dígitos enviado para ${formData.email || 'seu e-mail'}.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -249,6 +274,48 @@ export default function LoginPage() {
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back to Login
                 </Button>
+              </form>
+            )}
+
+            {step === "verify-account" && (
+              <form onSubmit={handleConfirmVerification} className="space-y-6 py-2">
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                      <Mail className="w-8 h-8" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="v-code" className="text-center block">Código de Confirmação</Label>
+                    <Input 
+                      id="v-code" 
+                      type="text" 
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder="000000" 
+                      className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+                      value={verifyCode}
+                      onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button className="w-full h-11" disabled={loading || verifyCode.length !== 6} type="submit">
+                    {loading ? "Verificando..." : "Confirmar E-mail"}
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    type="button" 
+                    className="w-full text-muted-foreground" 
+                    onClick={() => setStep("register")}
+                    disabled={loading}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Alterar dados
+                  </Button>
+                </div>
               </form>
             )}
 
