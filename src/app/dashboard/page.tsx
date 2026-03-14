@@ -1,10 +1,12 @@
+
 "use client"
 
 import * as React from "react"
 import { PasswordCard } from "@/components/PasswordCard"
 import { PasswordForm } from "@/components/PasswordForm"
+import { TwoFactorSetup } from "@/components/TwoFactorSetup"
 import { type PasswordEntry } from "@/app/lib/types"
-import { Shield, Search, LogOut, KeyRound } from "lucide-react"
+import { Shield, Search, LogOut, KeyRound, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Toaster } from "@/components/ui/toaster"
@@ -13,6 +15,7 @@ import { useRouter } from "next/navigation"
 export default function DashboardPage() {
   const [entries, setEntries] = React.useState<PasswordEntry[]>([])
   const [search, setSearch] = React.useState("")
+  const [show2FASetup, setShow2FASetup] = React.useState(false)
   const router = useRouter()
 
   // Initialize with some mock data for demo
@@ -67,7 +70,19 @@ export default function DashboardPage() {
             </div>
             <span className="font-headline font-bold text-xl tracking-tight">PassGuard</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-primary"
+              onClick={() => setShow2FASetup(true)}
+            >
+              <Settings className="w-4 h-4" />
+              Segurança
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShow2FASetup(true)} className="sm:hidden">
+              <Settings className="w-5 h-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
               <LogOut className="w-5 h-5" />
             </Button>
@@ -132,6 +147,7 @@ export default function DashboardPage() {
         )}
       </main>
 
+      <TwoFactorSetup open={show2FASetup} onOpenChange={setShow2FASetup} />
       <Toaster />
     </div>
   )
