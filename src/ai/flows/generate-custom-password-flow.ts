@@ -40,9 +40,9 @@ const generatePasswordPrompt = ai.definePrompt({
   output: { schema: GenerateCustomPasswordOutputSchema },
   prompt: `You are a secure password generator. Your task is to create a strong, random password based on the user's specific requirements.
 The output MUST be a JSON object conforming to the following schema:
-```json
+\`\`\`json
 {{jsonSchema GenerateCustomPasswordOutputSchema}}
-```
+\`\`\`
 
 The password must strictly adhere to the following criteria:
 - Total length: {{{length}}} characters.
