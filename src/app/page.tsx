@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -9,15 +10,15 @@ import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPl
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from "@/firebase"
-import { doc, setDoc, getFirestore } from "firebase/firestore"
-import { signOut } from "firebase/auth"
+import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp } from "@/firebase"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { auth } = useAuth ? { auth: useAuth() } : { auth: null }
+  const auth = useAuth()
   const { user, isUserLoading } = useUser()
+  const firestore = useFirestore()
   
   const [loading, setLoading] = React.useState(false)
   const [step, setStep] = React.useState<"login" | "2fa" | "register" | "verify-account">("login")
@@ -34,12 +35,22 @@ export default function LoginPage() {
     confirmPassword: ""
   })
 
-  // Redireciona se o usuário já estiver logado
+  // Redireciona ou verifica 2FA ao detectar o usuário logado
   React.useEffect(() => {
-    if (user && step !== "2fa" && step !== "verify-account") {
-      router.push("/dashboard")
+    async function checkSecurity() {
+      if (user && firestore && step !== "2fa" && step !== "verify-account") {
+        const userRef = doc(firestore, "users", user.uid)
+        const userSnap = await getDoc(userRef)
+        
+        if (userSnap.exists() && userSnap.data()?.twoFactorEnabled) {
+          setStep("2fa")
+        } else {
+          router.push("/dashboard")
+        }
+      }
     }
-  }, [user, router, step])
+    checkSecurity()
+  }, [user, firestore, router, step])
 
   const passwordsMatch = formData.password === formData.confirmPassword || formData.confirmPassword === ""
 
@@ -50,7 +61,6 @@ export default function LoginPage() {
 
     try {
       initiateEmailSignIn(auth, formData.email, formData.password)
-      // O redirecionamento acontece via useEffect ao detectar o 'user'
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -76,7 +86,6 @@ export default function LoginPage() {
     setLoading(true)
     try {
       initiateEmailSignUp(auth, formData.email, formData.password)
-      // Simulando o passo de verificação para o MVP
       setStep("verify-account")
       setLoading(false)
     } catch (error: any) {
@@ -93,16 +102,15 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
-    // Simulando criação de perfil no Firestore após "verificação"
-    if (user) {
-      const db = getFirestore()
+    if (user && firestore) {
       try {
-        await setDoc(doc(db, "users", user.uid), {
+        await setDoc(doc(firestore, "users", user.uid), {
           id: user.uid,
           externalUserId: user.uid,
           email: user.email,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          twoFactorEnabled: false
         })
         
         toast({
@@ -154,7 +162,7 @@ export default function LoginPage() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2" />
       </div>
 
-      <div className="w-full max-md relative z-10">
+      <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-2xl mb-4 rotate-3">
             <Shield className="w-10 h-10" />
@@ -180,66 +188,49 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {step === "login" && (
-              <>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="email" 
-                        type="email"
-                        placeholder="name@example.com" 
-                        className="pl-10"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="password" 
-                        type={showPassword ? "text" : "password"} 
-                        placeholder="••••••••" 
-                        className="pl-10 pr-10"
-                        required
-                        value={formData.password}
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <Button className="w-full h-11 group" disabled={loading} type="submit">
-                    {loading ? "Decrypting Vault..." : "Unlock Vault"}
-                    {!loading && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
-                  </Button>
-                </form>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-muted" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or access as guest</span>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="email" 
+                      type="email"
+                      placeholder="name@example.com" 
+                      className="pl-10"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                   </div>
                 </div>
-
-                <Button variant="outline" className="w-full gap-2" onClick={() => router.push("/dashboard")}>
-                   Explore Vault
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="password" 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      className="pl-10 pr-10"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button className="w-full h-11 group" disabled={loading} type="submit">
+                  {loading ? "Decrypting Vault..." : "Unlock Vault"}
+                  {!loading && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                 </Button>
-              </>
+              </form>
             )}
 
             {step === "register" && (

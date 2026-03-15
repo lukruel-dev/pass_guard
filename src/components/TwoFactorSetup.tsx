@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { ShieldCheck, Smartphone, Download, CheckCircle2, Copy, Check } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import { useUser, useFirestore, updateDocumentNonBlocking } from "@/firebase"
+import { doc } from "firebase/firestore"
 
 interface TwoFactorSetupProps {
   open: boolean
@@ -14,13 +17,14 @@ interface TwoFactorSetupProps {
 
 export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   const { toast } = useToast()
+  const { user } = useUser()
+  const firestore = useFirestore()
+  
   const [step, setStep] = React.useState(1)
-  const [isEnabled, setIsEnabled] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
 
-  // Em um app real, este segredo viria do backend do Firebase Auth ou Firestore
   const dummySecret = "JBSWY3DPEHPK3PXP"
-  const otpAuthUrl = `otpauth://totp/PassGuard:user@example.com?secret=${dummySecret}&issuer=PassGuard`
+  const otpAuthUrl = `otpauth://totp/PassGuard:${user?.email || 'user'}?secret=${dummySecret}&issuer=PassGuard`
 
   const handleCopySecret = () => {
     navigator.clipboard.writeText(dummySecret)
@@ -33,13 +37,19 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   }
 
   const handleEnable = () => {
-    setIsEnabled(true)
-    setStep(3)
-    localStorage.setItem("passguard_2fa_enabled", "true")
-    toast({
-      title: "Proteção Ativada!",
-      description: "Sua conta agora tem uma camada extra de segurança.",
-    })
+    if (user && firestore) {
+      const userRef = doc(firestore, "users", user.uid)
+      updateDocumentNonBlocking(userRef, {
+        twoFactorEnabled: true,
+        updatedAt: new Date().toISOString()
+      })
+      
+      setStep(3)
+      toast({
+        title: "Proteção Ativada!",
+        description: "Sua conta agora tem uma camada extra de segurança sincronizada na nuvem.",
+      })
+    }
   }
 
   const reset = () => {
@@ -123,7 +133,7 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
               <div className="space-y-2">
                 <h3 className="text-xl font-bold">Tudo pronto!</h3>
                 <p className="text-sm text-muted-foreground">
-                  Seu vault está agora protegido com autenticação de dois fatores. Guarde bem seu celular!
+                  Seu vault está agora protegido com autenticação de dois fatores sincronizada na nuvem.
                 </p>
               </div>
               <Button variant="outline" className="w-full" onClick={reset}>Fechar</Button>
