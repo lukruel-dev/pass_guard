@@ -9,13 +9,13 @@
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "https://picsum.photos/seed/789/192/192",
+      "src": "https://i.imgur.com/YJ46cAH.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://picsum.photos/seed/789/512/512",
+      "src": "https://i.imgur.com/YJ46cAH.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
