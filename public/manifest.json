@@ -1,7 +1,8 @@
+
 {
-  "name": "PassGuard - Secure Vault",
+  "name": "PassGuard",
   "short_name": "PassGuard",
-  "description": "Seu cofre de senhas seguro e sincronizado na nuvem.",
+  "description": "Secure Password Manager",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e293b",
