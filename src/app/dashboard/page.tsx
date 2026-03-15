@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -9,59 +8,82 @@ import { type PasswordEntry } from "@/app/lib/types"
 import { Shield, Search, LogOut, KeyRound, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Toaster } from "@/components/ui/toaster"
 import { useRouter } from "next/navigation"
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { collection, doc, query, orderBy } from "firebase/firestore"
+import { signOut } from "firebase/auth"
 
 export default function DashboardPage() {
-  const [entries, setEntries] = React.useState<PasswordEntry[]>([])
+  const router = useRouter()
+  const { user, isUserLoading } = useUser()
+  const firestore = useFirestore()
+  
   const [search, setSearch] = React.useState("")
   const [show2FASetup, setShow2FASetup] = React.useState(false)
-  const router = useRouter()
 
-  // Initialize with some mock data for demo
+  // Consulta as senhas do Firestore
+  const entriesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null
+    return query(
+      collection(firestore, "users", user.uid, "password_entries"),
+      orderBy("createdAt", "desc")
+    )
+  }, [firestore, user])
+
+  const { data: entries, isLoading: isEntriesLoading } = useCollection<PasswordEntry>(entriesQuery)
+
   React.useEffect(() => {
-    const saved = localStorage.getItem("passguard_entries")
-    if (saved) {
-      setEntries(JSON.parse(saved))
-    } else {
-      const initial = [
-        { id: "1", name: "Instagram", username: "user_cool", password: "password123", createdAt: Date.now() },
-        { id: "2", name: "Netflix", username: "bingewatcher@mail.com", password: "secure-pass-99", createdAt: Date.now() },
-      ]
-      setEntries(initial)
-      localStorage.setItem("passguard_entries", JSON.stringify(initial))
+    if (!isUserLoading && !user) {
+      router.push("/")
     }
-  }, [])
+  }, [user, isUserLoading, router])
 
-  const addEntry = (entry: Omit<PasswordEntry, "id" | "createdAt">) => {
-    const newEntry: PasswordEntry = {
-      ...entry,
-      id: crypto.randomUUID(),
-      createdAt: Date.now(),
-    }
-    const updated = [newEntry, ...entries]
-    setEntries(updated)
-    localStorage.setItem("passguard_entries", JSON.stringify(updated))
+  const addEntry = (entry: Omit<PasswordEntry, "id" | "userProfileId" | "createdAt" | "updatedAt">) => {
+    if (!firestore || !user) return
+
+    const colRef = collection(firestore, "users", user.uid, "password_entries")
+    const newDocId = crypto.randomUUID()
+    
+    addDocumentNonBlocking(colRef, {
+      id: newDocId,
+      userProfileId: user.uid,
+      name: entry.name,
+      username: entry.username,
+      encryptedPassword: entry.password, // No MVP, salvamos plano mas no campo correto do backend.json
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
   }
 
   const deleteEntry = (id: string) => {
-    const updated = entries.filter(e => e.id !== id)
-    setEntries(updated)
-    localStorage.setItem("passguard_entries", JSON.stringify(updated))
+    if (!firestore || !user) return
+    const docRef = doc(firestore, "users", user.uid, "password_entries", id)
+    deleteDocumentNonBlocking(docRef)
   }
 
-  const filteredEntries = entries.filter(e => 
+  const filteredEntries = (entries || []).filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase()) || 
     e.username.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const { auth } = await import('firebase/auth')
+    const { getAuth } = await import('firebase/auth')
+    const currentAuth = getAuth()
+    await signOut(currentAuth)
     router.push("/")
+  }
+
+  if (isUserLoading || isEntriesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <KeyRound className="w-12 h-12 text-primary animate-pulse" />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -99,7 +121,6 @@ export default function DashboardPage() {
           <PasswordForm onAdd={addEntry} />
         </div>
 
-        {/* Stats / Quick Info */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-card p-4 rounded-xl border flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -107,10 +128,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Entries</p>
-              <p className="font-bold text-xl">{entries.length}</p>
+              <p className="font-bold text-xl">{entries?.length || 0}</p>
             </div>
           </div>
-          {/* Search bar integrated in the layout */}
           <div className="sm:col-span-2 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -122,11 +142,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Password List */}
         {filteredEntries.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEntries.map(entry => (
-              <PasswordCard key={entry.id} entry={entry} onDelete={deleteEntry} />
+              <PasswordCard key={entry.id} entry={{...entry, password: entry.encryptedPassword}} onDelete={deleteEntry} />
             ))}
           </div>
         ) : (
@@ -148,7 +167,6 @@ export default function DashboardPage() {
       </main>
 
       <TwoFactorSetup open={show2FASetup} onOpenChange={setShow2FASetup} />
-      <Toaster />
     </div>
   )
 }

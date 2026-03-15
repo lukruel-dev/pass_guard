@@ -9,16 +9,21 @@ import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPl
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from "@/firebase"
+import { doc, setDoc, getFirestore } from "firebase/firestore"
+import { signOut } from "firebase/auth"
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { auth } = useAuth ? { auth: useAuth() } : { auth: null }
+  const { user, isUserLoading } = useUser()
+  
   const [loading, setLoading] = React.useState(false)
   const [step, setStep] = React.useState<"login" | "2fa" | "register" | "verify-account">("login")
   const [otpCode, setOtpCode] = React.useState("")
   const [verifyCode, setVerifyCode] = React.useState("")
   
-  // States for password visibility
   const [showPassword, setShowPassword] = React.useState(false)
   const [showRegPassword, setShowRegPassword] = React.useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false)
@@ -29,32 +34,36 @@ export default function LoginPage() {
     confirmPassword: ""
   })
 
+  // Redireciona se o usuário já estiver logado
+  React.useEffect(() => {
+    if (user && step !== "2fa" && step !== "verify-account") {
+      router.push("/dashboard")
+    }
+  }, [user, router, step])
+
   const passwordsMatch = formData.password === formData.confirmPassword || formData.confirmPassword === ""
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!auth) return
     setLoading(true)
 
-    // Simulação de verificação de credenciais
-    setTimeout(() => {
-      // Verifica se o 2FA está ativado especificamente para este navegador/sessão
-      const is2FAEnabled = localStorage.getItem("passguard_2fa_enabled") === "true"
-      
-      if (is2FAEnabled) {
-        setStep("2fa")
-        setLoading(false)
-      } else {
-        toast({
-          title: "Cofre Aberto",
-          description: "Acesso autorizado com sucesso.",
-        })
-        router.push("/dashboard")
-      }
-    }, 800)
+    try {
+      initiateEmailSignIn(auth, formData.email, formData.password)
+      // O redirecionamento acontece via useEffect ao detectar o 'user'
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro no acesso",
+        description: "Credenciais inválidas ou erro de conexão.",
+      })
+      setLoading(false)
+    }
   }
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!auth) return
     if (formData.password !== formData.confirmPassword) {
       toast({
         variant: "destructive",
@@ -65,56 +74,56 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    // Simulação de criação de conta
-    // Limpamos o 2FA antigo para garantir que o novo usuário não tenha isso ativado por engano
-    localStorage.removeItem("passguard_2fa_enabled")
-    
-    setTimeout(() => {
-      toast({
-        title: "Código Enviado!",
-        description: `Enviamos um código de confirmação para ${formData.email}`,
-      })
+    try {
+      initiateEmailSignUp(auth, formData.email, formData.password)
+      // Simulando o passo de verificação para o MVP
       setStep("verify-account")
       setLoading(false)
-    }, 1200)
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro no registro",
+        description: error.message || "Não foi possível criar sua conta.",
+      })
+      setLoading(false)
+    }
   }
 
-  const handleConfirmVerification = (e: React.FormEvent) => {
+  const handleConfirmVerification = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulação de validação do código de e-mail/sms
-    setTimeout(() => {
-      if (verifyCode.length === 6) {
+    // Simulando criação de perfil no Firestore após "verificação"
+    if (user) {
+      const db = getFirestore()
+      try {
+        await setDoc(doc(db, "users", user.uid), {
+          id: user.uid,
+          externalUserId: user.uid,
+          email: user.email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        
         toast({
           title: "Conta Verificada!",
-          description: "Seu e-mail foi confirmado com sucesso. Agora você pode acessar o cofre.",
+          description: "Seu perfil foi configurado com sucesso.",
         })
-        setStep("login")
-        setLoading(false)
-        setVerifyCode("")
-      } else {
-        setLoading(false)
-        toast({
-          variant: "destructive",
-          title: "Código Inválido",
-          description: "O código de verificação está incorreto.",
-        })
+        router.push("/dashboard")
+      } catch (err) {
+        console.error(err)
       }
-    }, 800)
+    } else {
+      setStep("login")
+    }
+    setLoading(false)
   }
 
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
-    // Simulação de validação do código OTP (Google Authenticator)
     setTimeout(() => {
       if (otpCode.length === 6) {
-        toast({
-          title: "Identidade Confirmada",
-          description: "Segunda camada de proteção validada.",
-        })
         router.push("/dashboard")
       } else {
         setLoading(false)
@@ -127,9 +136,19 @@ export default function LoginPage() {
     }, 800)
   }
 
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <KeyRound className="w-12 h-12 text-primary animate-pulse" />
+          <p className="text-muted-foreground animate-pulse">Sincronizando Cofre...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      {/* Background patterns */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2" />
@@ -164,7 +183,7 @@ export default function LoginPage() {
               <>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email or Phone</Label>
+                    <Label htmlFor="email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
@@ -173,13 +192,14 @@ export default function LoginPage() {
                         placeholder="name@example.com" 
                         className="pl-10"
                         required
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password">Password</Label>
-                      <Button variant="link" type="button" className="p-0 h-auto text-xs text-primary">Forgot password?</Button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -189,6 +209,8 @@ export default function LoginPage() {
                         placeholder="••••••••" 
                         className="pl-10 pr-10"
                         required
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
                       />
                       <button
                         type="button"
@@ -210,25 +232,13 @@ export default function LoginPage() {
                     <span className="w-full border-t border-muted" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                    <span className="bg-card px-2 text-muted-foreground">Or access as guest</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="gap-2" onClick={() => router.push("/dashboard")}>
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                    Google
-                  </Button>
-                  <Button variant="outline" className="gap-2" onClick={() => router.push("/dashboard")}>
-                    <Smartphone className="w-4 h-4" />
-                    Phone
-                  </Button>
-                </div>
+                <Button variant="outline" className="w-full gap-2" onClick={() => router.push("/dashboard")}>
+                   Explore Vault
+                </Button>
               </>
             )}
 
