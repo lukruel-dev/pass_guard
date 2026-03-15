@@ -1,7 +1,7 @@
 {
-  "name": "PassGuard",
+  "name": "PassGuard - Secure Vault",
   "short_name": "PassGuard",
-  "description": "Secure Password Manager",
+  "description": "Seu cofre de senhas seguro e sincronizado na nuvem.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e293b",
@@ -10,12 +10,14 @@
     {
       "src": "https://picsum.photos/seed/passguard/192/192",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://picsum.photos/seed/passguard/512/512",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
