@@ -4,13 +4,13 @@
     {
       "id": "app-logo",
       "description": "Logotipo do PassGuard - Escudo de Segurança",
-      "imageUrl": "https://picsum.photos/seed/shield-safe-vault/192/192",
+      "imageUrl": "https://picsum.photos/seed/pass-shield-blue/192/192",
       "imageHint": "security shield"
     },
     {
       "id": "app-icon-large",
       "description": "Ícone grande do PassGuard",
-      "imageUrl": "https://picsum.photos/seed/shield-safe-vault/512/512",
+      "imageUrl": "https://picsum.photos/seed/pass-shield-blue/512/512",
       "imageHint": "security lock"
     }
   ]
