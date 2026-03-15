@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -66,9 +65,11 @@ export default function LoginPage() {
     }
 
     setLoading(true)
-    // Simulação de criação de conta e "envio" de código de verificação
+    // Simulação de criação de conta
+    // Limpamos o 2FA antigo para garantir que o novo usuário não tenha isso ativado por engano
+    localStorage.removeItem("passguard_2fa_enabled")
+    
     setTimeout(() => {
-      localStorage.setItem("passguard_2fa_enabled", "false")
       toast({
         title: "Código Enviado!",
         description: `Enviamos um código de confirmação para ${formData.email}`,
@@ -134,7 +135,7 @@ export default function LoginPage() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/20 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2" />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-md relative z-10">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-2xl mb-4 rotate-3">
             <Shield className="w-10 h-10" />
