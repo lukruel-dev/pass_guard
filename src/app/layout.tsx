@@ -34,8 +34,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/security-shield-99/192/192" data-ai-hint="security shield" />
+        <link rel="apple-touch-icon" href="https://picsum.photos/seed/shield-safe-vault/192/192" data-ai-hint="security shield" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-touch-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="font-body antialiased">
