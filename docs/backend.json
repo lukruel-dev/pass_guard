@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user within the PassGuard application, linking to an external authentication system and acting as the owner of all associated password entries.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "externalUserId": {
+          "type": "string",
+          "description": "Unique identifier for the user as provided by the external authentication system (e.g., Google Auth ID, custom Auth0 ID)."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address associated with the user profile.",
+          "format": "email"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "externalUserId",
+        "email",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PasswordEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PasswordEntry",
+      "type": "object",
+      "description": "Represents a single stored password entry for a specific website, application, or service within the PassGuard application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PasswordEntry entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this password entry. (Relationship: UserProfile 1:N PasswordEntry)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the website, application, or service associated with this password entry (e.g., 'Instagram', 'Bank Account Login')."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username or email address used to log in to the associated service."
+        },
+        "encryptedPassword": {
+          "type": "string",
+          "description": "The securely encrypted password for the entry. This field stores the ciphertext, not the plain-text password."
+        },
+        "url": {
+          "type": "string",
+          "description": "Optional URL of the website or service associated with this password entry.",
+          "format": "uri"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional additional notes or context about the password entry."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the password entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the password entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "name",
+        "username",
+        "encryptedPassword",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PasswordGenerationDetail": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PasswordGenerationDetail",
+      "type": "object",
+      "description": "Stores the specific criteria and parameters that were used to generate a particular password, linked to a PasswordEntry.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PasswordGenerationDetail entity."
+        },
+        "passwordEntryId": {
+          "type": "string",
+          "description": "Reference to the PasswordEntry this generation detail belongs to. (Relationship: PasswordEntry 1:1 PasswordGenerationDetail)"
+        },
+        "length": {
+          "type": "number",
+          "description": "The total desired length of the generated password."
+        },
+        "includeSpecialCharacters": {
+          "type": "boolean",
+          "description": "Indicates whether special characters were included in the generated password."
+        },
+        "specialCharactersCount": {
+          "type": "number",
+          "description": "The number of special characters included in the generated password."
+        },
+        "includeUppercase": {
+          "type": "boolean",
+          "description": "Indicates whether uppercase letters were included in the generated password."
+        },
+        "uppercaseCount": {
+          "type": "number",
+          "description": "The number of uppercase letters included in the generated password."
+        },
+        "includeLowercase": {
+          "type": "boolean",
+          "description": "Indicates whether lowercase letters were included in the generated password."
+        },
+        "lowercaseCount": {
+          "type": "number",
+          "description": "The number of lowercase letters included in the generated password."
+        },
+        "includeNumbers": {
+          "type": "boolean",
+          "description": "Indicates whether numbers were included in the generated password."
+        },
+        "numbersCount": {
+          "type": "number",
+          "description": "The number of digits (numbers) included in the generated password."
+        }
+      },
+      "required": [
+        "id",
+        "passwordEntryId",
+        "length",
+        "includeSpecialCharacters",
+        "specialCharactersCount",
+        "includeUppercase",
+        "uppercaseCount",
+        "includeLowercase",
+        "lowercaseCount",
+        "includeNumbers",
+        "numbersCount"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual user profiles. The document ID '{userId}' MUST match the Firebase Authentication UID (`request.auth.uid`) for direct ownership. Includes 'externalUserId' field which is also expected to be `request.auth.uid` for clarity."
+        }
+      },
+      {
+        "path": "/users/{userId}/password_entries/{passwordEntryId}",
+        "definition": {
+          "entityName": "PasswordEntry",
+          "schema": {
+            "$ref": "#/backend/entities/PasswordEntry"
+          },
+          "description": "Stores all password entries belonging to a specific user. The 'userProfileId' field within each document is denormalized and MUST match the '{userId}' in the path for authorization independence. All documents in this collection are private to the owning user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user (matching Firebase Auth UID) who owns this password entry."
+            },
+            {
+              "name": "passwordEntryId",
+              "description": "The unique identifier for a specific password entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/password_entries/{passwordEntryId}/generation_details/{generationDetailId}",
+        "definition": {
+          "entityName": "PasswordGenerationDetail",
+          "schema": {
+            "$ref": "#/backend/entities/PasswordGenerationDetail"
+          },
+          "description": "Stores the generation details for a specific password entry. The 'passwordEntryId' field within the document is denormalized and MUST match the '{passwordEntryId}' in the path. Access is implicitly controlled by the parent 'userId'.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user (matching Firebase Auth UID) who owns this password entry and its generation details."
+            },
+            {
+              "name": "passwordEntryId",
+              "description": "The unique identifier of the parent password entry."
+            },
+            {
+              "name": "generationDetailId",
+              "description": "The unique identifier for the specific password generation details."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore data structure for PassGuard prioritizes secure, user-centric data isolation, ensuring Authorization Independence and robust Queryable Access Patterns (QAPs). The core principle is to segregate all user-owned data under a dedicated user path. This design eliminates the need for `get()` calls in security rules, significantly simplifying rule logic and improving performance and debuggability.\n\n1.  **User Profile (`/users/{userId}`):** Each user's profile is stored as a top-level document under a collection named `users`. The document ID (`{userId}`) for a `UserProfile` will directly correspond to the Firebase `request.auth.uid`. This path-based ownership is the most secure and straightforward for individual user data. Authorization rules simply check if `request.auth.uid` matches the `userId` wildcard.\n\n2.  **Password Entries (`/users/{userId}/password_entries/{passwordEntryId}`):** All `PasswordEntry` documents belonging to a user are stored as a subcollection under their respective `UserProfile`. This maintains a clear ownership hierarchy. Crucially, each `PasswordEntry` document will include a denormalized `userProfileId` field, which *must* match the `userId` from the path and `request.auth.uid`. This denormalization is critical for Authorization Independence: security rules for `password_entries` can check `request.auth.uid == userId && resource.data.userProfileId == request.auth.uid` without needing to perform an expensive and non-atomic `get()` operation on the parent `UserProfile` document. This also ensures that if a user tries to access another user's password entry by guessing an ID, the `userProfileId` check in the document itself provides a second layer of defense and confirms the correct ownership.\n\n3.  **Password Generation Details (`/users/{userId}/password_entries/{passwordEntryId}/generation_details/{generationDetailId}`):** `PasswordGenerationDetail` documents, being 1:1 related to `PasswordEntry`, are further nested as a subcollection. This continues the hierarchical ownership. Similar to `PasswordEntry`, while `passwordEntryId` is present within the document, authorization is primarily derived from the parent path's `userId`. Rules can simply verify `request.auth.uid == userId`. Since access to `generation_details` is implicitly guarded by access to `password_entries` (which in turn is guarded by `users`), no additional `get()` calls are required for this subcollection either, further enforcing Authorization Independence.\n\n**QAPs (Queryable Access Patterns) Support:**\nThis structure inherently supports QAPs by ensuring **Structural Segregation**. Each collection or subcollection (e.g., `users`, `password_entries`, `generation_details`) holds documents that share the exact same security posture: they are all private to the `userId` defined in their path. There are no mixed public/private documents within the same collection. Therefore, `list` operations are implicitly secure:\n*   A user can only `list` documents within their own `/users/{request.auth.uid}/...` path.\n*   Firestore security rules will naturally filter results based on the `userId` wildcard matching `request.auth.uid` at query time. For instance, a query on `/users/{request.auth.uid}/password_entries` will only return password entries belonging to the authenticated user, without requiring additional client-side filtering or complex rule logic that tries to act as a filter. This adheres to the principle that 'rules are not filters', making `list` operations secure, efficient, and easy to reason about."
+  }
+}

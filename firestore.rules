@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * PASSGUARD SECURITY RULES
+     *
+     * Core Philosophy:
+     * This ruleset implements a strict user-isolation model. Security is enforced primarily 
+     * through path-based authorization where all data is nested under a user's unique identifier.
+     *
+     * Data Structure:
+     * The hierarchy follows a /users/{userId} pattern. All sensitive data (password entries and 
+     * generation details) are stored as subcollections of the user profile, ensuring clear 
+     * ownership and logical separation.
+     *
+     * Key Security Decisions:
+     * 1. Authorization Independence: We use denormalized ownership fields (e.g., userProfileId) 
+     *    and path wildcards to verify access without performing costly cross-document lookups (get() calls).
+     * 2. Structural Segregation: Private user data is kept entirely separate from other users 
+     *    in the database tree, making list operations inherently secure.
+     * 3. Prototyping Flexibility: Rules enforce strict ownership and relational integrity 
+     *    (IDs must match) but allow flexibility in the specific content fields to support 
+     *    rapid feature iteration.
+     * 4. Immutable Identity: Relational fields that link data to a user or a parent document 
+     *    are enforced as immutable during updates.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** Checks if the request is coming from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Validates that the authenticated user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Combines ownership check with a check for document existence for updates and deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the top-level UserProfile collection. Users can only access their own profile.
+     * @path /users/{userId}
+     * @allow (get) request.auth.uid == 'user_123' requesting /users/user_123
+     * @deny (list) any user attempting to list all profiles in the /users collection.
+     * @principle Path-based ownership and self-creation validation.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Users cannot list other user profiles.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for Password Entries. Secured by the parent userId and internal userProfileId field.
+       * @path /users/{userId}/password_entries/{passwordEntryId}
+       * @allow (create) owner 'user_123' creating an entry with userProfileId 'user_123'.
+       * @deny (update) changing the userProfileId to 'user_456'.
+       * @principle Relational integrity and hierarchical ownership.
+       */
+      match /password_entries/{passwordEntryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Rules for Password Generation Details. Access is controlled by the top-level user owner.
+         * @path /users/{userId}/password_entries/{passwordEntryId}/generation_details/{generationDetailId}
+         * @allow (list) owner 'user_123' listing details for their own password entries.
+         * @deny (get) user 'user_456' trying to read generation details under 'user_123''s path.
+         * @principle Deeply nested path-based authorization.
+         */
+        match /generation_details/{generationDetailId} {
+          allow get, list: if isOwner(userId);
+          allow create: if isOwner(userId) && request.resource.data.passwordEntryId == passwordEntryId;
+          allow update: if isExistingOwner(userId) && request.resource.data.passwordEntryId == resource.data.passwordEntryId;
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+    }
+  }
+}
