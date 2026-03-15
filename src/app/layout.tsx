@@ -11,14 +11,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const iconUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
+  
   return (
     <html lang="pt-BR" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <link rel="apple-touch-icon" href="https://i.imgur.com/YJ46cAH.png" data-ai-hint="security logo" />
-        <link rel="icon" type="image/png" href="https://i.imgur.com/YJ46cAH.png" />
+        <link rel="apple-touch-icon" href={iconUrl} data-ai-hint="security logo" />
+        <link rel="icon" type="image/png" href={iconUrl} />
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-app-capable" content="yes" />

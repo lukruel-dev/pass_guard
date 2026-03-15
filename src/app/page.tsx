@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp } from "@/firebase"
 import { doc, getDoc, setDoc } from "firebase/firestore"
+import Image from "next/image"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -35,7 +36,8 @@ export default function LoginPage() {
     confirmPassword: ""
   })
 
-  // Redireciona ou verifica 2FA ao detectar o usuário logado
+  const logoUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
+
   React.useEffect(() => {
     async function checkSecurity() {
       if (user && firestore && step !== "2fa" && step !== "verify-account") {
@@ -164,8 +166,14 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-2xl mb-4 rotate-3">
-            <Shield className="w-10 h-10" />
+          <div className="w-20 h-20 rounded-2xl bg-card border border-primary/20 flex items-center justify-center shadow-2xl mb-4 overflow-hidden">
+            <Image 
+              src={logoUrl} 
+              alt="PassGuard Logo" 
+              width={80} 
+              height={80}
+              className="object-cover"
+            />
           </div>
           <h1 className="text-4xl font-headline font-black tracking-tight text-white mb-2">PassGuard</h1>
           <p className="text-muted-foreground text-center">Your secure vault for all your digital keys.</p>
