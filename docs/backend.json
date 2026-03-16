@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -163,7 +164,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google"
     ]
   },
   "firestore": {
@@ -223,6 +225,6 @@
         }
       }
     ],
-    "reasoning": "The recommended Firestore data structure for PassGuard prioritizes secure, user-centric data isolation, ensuring Authorization Independence and robust Queryable Access Patterns (QAPs). The core principle is to segregate all user-owned data under a dedicated user path. This design eliminates the need for `get()` calls in security rules, significantly simplifying rule logic and improving performance and debuggability.\n\n1.  **User Profile (`/users/{userId}`):** Each user's profile is stored as a top-level document under a collection named `users`. The document ID (`{userId}`) for a `UserProfile` will directly correspond to the Firebase `request.auth.uid`. This path-based ownership is the most secure and straightforward for individual user data. Authorization rules simply check if `request.auth.uid` matches the `userId` wildcard.\n\n2.  **Password Entries (`/users/{userId}/password_entries/{passwordEntryId}`):** All `PasswordEntry` documents belonging to a user are stored as a subcollection under their respective `UserProfile`. This maintains a clear ownership hierarchy. Crucially, each `PasswordEntry` document will include a denormalized `userProfileId` field, which *must* match the `userId` from the path and `request.auth.uid`. This denormalization is critical for Authorization Independence: security rules for `password_entries` can check `request.auth.uid == userId && resource.data.userProfileId == request.auth.uid` without needing to perform an expensive and non-atomic `get()` operation on the parent `UserProfile` document. This also ensures that if a user tries to access another user's password entry by guessing an ID, the `userProfileId` check in the document itself provides a second layer of defense and confirms the correct ownership.\n\n3.  **Password Generation Details (`/users/{userId}/password_entries/{passwordEntryId}/generation_details/{generationDetailId}`):** `PasswordGenerationDetail` documents, being 1:1 related to `PasswordEntry`, are further nested as a subcollection. This continues the hierarchical ownership. Similar to `PasswordEntry`, while `passwordEntryId` is present within the document, authorization is primarily derived from the parent path's `userId`. Rules can simply verify `request.auth.uid == userId`. Since access to `generation_details` is implicitly guarded by access to `password_entries` (which in turn is guarded by `users`), no additional `get()` calls are required for this subcollection either, further enforcing Authorization Independence.\n\n**QAPs (Queryable Access Patterns) Support:**\nThis structure inherently supports QAPs by ensuring **Structural Segregation**. Each collection or subcollection (e.g., `users`, `password_entries`, `generation_details`) holds documents that share the exact same security posture: they are all private to the `userId` defined in their path. There are no mixed public/private documents within the same collection. Therefore, `list` operations are implicitly secure:\n*   A user can only `list` documents within their own `/users/{request.auth.uid}/...` path.\n*   Firestore security rules will naturally filter results based on the `userId` wildcard matching `request.auth.uid` at query time. For instance, a query on `/users/{request.auth.uid}/password_entries` will only return password entries belonging to the authenticated user, without requiring additional client-side filtering or complex rule logic that tries to act as a filter. This adheres to the principle that 'rules are not filters', making `list` operations secure, efficient, and easy to reason about."
+    "reasoning": "The recommended Firestore data structure for PassGuard prioritizes secure, user-centric data isolation, ensuring Authorization Independence and robust Queryable Access Patterns (QAPs). The core principle is to segregate all user-owned data under a dedicated user path. This design eliminates the need for `get()` calls in security rules, significantly simplifying rule logic and improving performance and debuggability."
   }
 }
