@@ -25,6 +25,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-touch-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#3b82f6" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
         <title>PassGuard - Cofre Seguro de Senhas</title>
         <meta name="description" content="Gerencie e gere senhas fortes com segurança máxima no PassGuard." />
