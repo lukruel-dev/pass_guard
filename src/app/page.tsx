@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, Eye, EyeOff, AlertCircle, SeparatorHorizontal } from "lucide-react"
+import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -51,7 +51,6 @@ export default function LoginPage() {
             router.push("/dashboard")
           }
         } else {
-          // Se o usuário autenticou mas não tem perfil no Firestore (ex: Login com Google pela primeira vez)
           await setDoc(doc(firestore, "users", user.uid), {
             id: user.uid,
             externalUserId: user.uid,

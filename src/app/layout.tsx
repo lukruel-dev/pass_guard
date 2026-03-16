@@ -21,10 +21,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <link rel="apple-touch-icon" href={iconUrl} data-ai-hint="security logo" />
         <link rel="icon" type="image/png" href={iconUrl} />
-        {/* Adicionado versionamento ?v=2 para forçar o Android a atualizar o cache do manifesto */}
-        <link rel="manifest" href="/manifest.json?v=2" />
+        {/* Incrementado para v=3 para forçar o Android a atualizar o cache */}
+        <link rel="manifest" href="/manifest.json?v=3" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-touch-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
