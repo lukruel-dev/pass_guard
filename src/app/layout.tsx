@@ -21,8 +21,8 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <link rel="apple-touch-icon" href={iconUrl} data-ai-hint="security logo" />
         <link rel="icon" type="image/png" href={iconUrl} />
-        {/* Incrementado para v=3 para forçar o Android a atualizar o cache */}
-        <link rel="manifest" href="/manifest.json?v=3" />
+        {/* Incrementado para v=4 para forçar o Android a atualizar o cache de forma agressiva */}
+        <link rel="manifest" href="/manifest.json?v=4" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
