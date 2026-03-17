@@ -11,6 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const iconUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
+  const version = "10";
   
   return (
     <html lang="pt-BR" className="dark">
@@ -19,12 +20,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         
-        {/* Favicons e Apple Icons com Cache Busting v8 */}
-        <link rel="icon" type="image/png" href={`${iconUrl}?v=8`} />
-        <link rel="apple-touch-icon" href={`${iconUrl}?v=8`} />
+        {/* Favicons e Apple Icons com Cache Busting v10 */}
+        <link rel="icon" type="image/png" href={`${iconUrl}?v=${version}`} />
+        <link rel="shortcut icon" href={`${iconUrl}?v=${version}`} />
+        <link rel="apple-touch-icon" href={`${iconUrl}?v=${version}`} />
         
-        {/* Manifest com Novo ID e Versão v8 para forçar atualização no Android */}
-        <link rel="manifest" href="/manifest.json?v=8" />
+        {/* Manifest com Novo ID e Versão v10 para forçar atualização no Android */}
+        <link rel="manifest" href={`/manifest.json?v=${version}`} />
         
         {/* Meta tags para Mobile */}
         <meta name="mobile-web-app-capable" content="yes" />

@@ -1,10 +1,10 @@
 
 {
-  "id": "passguard-v8-final",
-  "name": "PassGuard Security",
+  "id": "passguard-v10-final",
+  "name": "PassGuard Security Vault",
   "short_name": "PassGuard",
   "description": "Seu cofre seguro para senhas digitais com proteção máxima.",
-  "start_url": "/",
+  "start_url": "/?v=10",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -12,19 +12,19 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png",
+      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png?v=10",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png",
+      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png?v=10",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png",
+      "src": "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png?v=10",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
