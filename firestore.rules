@@ -3,52 +3,39 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * PASSGUARD PRODUCTION SECURITY RULES
-     * 
-     * Estas regras substituem o "Modo de Teste" e não possuem data de expiração.
-     * O acesso é restrito estritamente ao proprietário de cada documento baseado no UID do Firebase Auth.
+     * REGRAS DE PRODUÇÃO PASSGUARD
+     * O acesso é restrito estritamente ao proprietário de cada documento.
      */
 
-    // --- Funções Auxiliares ---
-
-    /** Verifica se o usuário está autenticado. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** Verifica se o UID do usuário autenticado corresponde ao userId do caminho. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** Verifica a propriedade de um documento existente. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // --- Regras de Coleção ---
-
     // Perfil do Usuário
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false; // Proíbe a listagem de todos os perfis
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow list: if false; 
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
       // Entradas de Senha
       match /password_entries/{passwordEntryId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
-        allow delete: if isExistingOwner(userId);
+        allow update: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow delete: if isOwner(userId);
 
-        // Detalhes de Geração (Senhas geradas por IA)
+        // Detalhes de Geração
         match /generation_details/{generationDetailId} {
           allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId) && request.resource.data.passwordEntryId == passwordEntryId;
-          allow update: if isExistingOwner(userId) && request.resource.data.passwordEntryId == resource.data.passwordEntryId;
-          allow delete: if isExistingOwner(userId);
+          allow create: if isOwner(userId);
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
         }
       }
     }
