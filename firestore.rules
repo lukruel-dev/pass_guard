@@ -4,7 +4,7 @@ service cloud.firestore {
 
     /**
      * REGRAS DE PRODUÇÃO PASSGUARD
-     * O acesso é restrito estritamente ao proprietário de cada documento.
+     * Proteção permanente contra expiração do modo de teste.
      */
 
     function isSignedIn() {

@@ -10,7 +10,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const iconUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
-  const version = "14";
+  const version = "15";
   
   return (
     <html lang="pt-BR" className="dark">
@@ -31,7 +31,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         
-        <title>PassGuard Security PRO</title>
+        <title>PassGuard Vault Security</title>
         <meta name="description" content="Gerencie e gere senhas fortes com segurança máxima no PassGuard." />
       </head>
       <body className="font-body antialiased">
