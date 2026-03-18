@@ -35,7 +35,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         
-        <title>PassGuard Ultimate</title>
+        <title>PassGuard Ultimate Security</title>
         <meta name="description" content="Gerencie e gere senhas fortes com segurança máxima no PassGuard." />
       </head>
       <body className="font-body antialiased">
