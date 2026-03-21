@@ -135,18 +135,17 @@ export default function LoginPage() {
 
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     
-    // Como o 2FA é simulado no MVP, aceitamos qualquer código de 6 dígitos
-    // para permitir que o usuário acesse o dashboard.
+    // Como o 2FA é simulado no MVP, aceitamos qualquer código de 6 dígitos.
+    // Removemos o setLoading(true) para evitar que o botão fique travado em "Verificando..."
     if (otpCode.length === 6) {
       toast({
         title: "Acesso Autorizado",
         description: "Bem-vindo de volta ao seu cofre.",
       })
-      router.push("/dashboard")
+      // Usamos window.location para garantir um redirecionamento limpo e imediato
+      window.location.href = "/dashboard"
     } else {
-      setLoading(false)
       toast({
         variant: "destructive",
         title: "Código Inválido",
