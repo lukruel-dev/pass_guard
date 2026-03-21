@@ -389,8 +389,8 @@ export default function LoginPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <Button className="w-full h-11" disabled={loading || otpCode.length !== 6} type="submit">
-                    {loading ? "Verificando..." : "Confirmar e Acessar"}
+                  <Button className="w-full h-11" disabled={otpCode.length !== 6} type="submit">
+                    Confirmar e Acessar
                   </Button>
                   <Button 
                     variant="ghost" 
