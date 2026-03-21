@@ -14,20 +14,18 @@ export function initiateAnonymousSignIn(authInstance: Auth): void {
   signInAnonymously(authInstance);
 }
 
-/** Initiate email/password sign-up (non-blocking). */
-export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): void {
-  createUserWithEmailAndPassword(authInstance, email, password);
+/** Initiate email/password sign-up. */
+export function initiateEmailSignUp(authInstance: Auth, email: string, password: string) {
+  return createUserWithEmailAndPassword(authInstance, email, password);
 }
 
-/** Initiate email/password sign-in (non-blocking). */
-export function initiateEmailSignIn(authInstance: Auth, email: string, password: string): void {
-  signInWithEmailAndPassword(authInstance, email, password);
+/** Initiate email/password sign-in. */
+export function initiateEmailSignIn(authInstance: Auth, email: string, password: string) {
+  return signInWithEmailAndPassword(authInstance, email, password);
 }
 
-/** Initiate Google sign-in (non-blocking). */
-export function initiateGoogleSignIn(authInstance: Auth): void {
+/** Initiate Google sign-in. */
+export function initiateGoogleSignIn(authInstance: Auth) {
   const provider = new GoogleAuthProvider();
-  signInWithPopup(authInstance, provider).catch(() => {
-    // Erros de fechamento de popup ou cancelamento são ignorados ou tratados pelo onAuthStateChanged se necessário
-  });
+  return signInWithPopup(authInstance, provider);
 }

@@ -9,8 +9,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const iconUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
-  const version = "15";
+  const version = "16"; // Incremented version to bust cache
   
   return (
     <html lang="pt-BR" className="dark">
@@ -19,9 +18,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         
-        <link rel="icon" type="image/png" href={`${iconUrl}?v=${version}`} />
-        <link rel="shortcut icon" href={`${iconUrl}?v=${version}`} />
-        <link rel="apple-touch-icon" href={`${iconUrl}?v=${version}`} />
+        <link rel="icon" type="image/svg+xml" href={`/icon.svg?v=${version}`} />
+        <link rel="shortcut icon" href={`/icon.svg?v=${version}`} />
+        <link rel="apple-touch-icon" href={`/icon.svg?v=${version}`} />
         
         <link rel="manifest" href={`/manifest.json?v=${version}`} />
         

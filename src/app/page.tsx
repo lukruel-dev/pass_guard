@@ -74,7 +74,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      initiateEmailSignIn(auth, formData.email, formData.password)
+      await initiateEmailSignIn(auth, formData.email, formData.password)
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -85,10 +85,21 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     if (!auth) return
     setLoading(true)
-    initiateGoogleSignIn(auth)
+    try {
+      await initiateGoogleSignIn(auth)
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Login bloqueado",
+        description: error.code === 'auth/unauthorized-domain' 
+          ? "O domínio/IP atual não está na lista de domínios seguros do Firebase." 
+          : "Erro ao abrir popup do Google.",
+      })
+      setLoading(false)
+    }
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -105,9 +116,12 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      initiateEmailSignUp(auth, formData.email, formData.password)
-      setStep("verify-account")
-      setLoading(false)
+      await initiateEmailSignUp(auth, formData.email, formData.password)
+      toast({
+        title: "Conta Criada",
+        description: "Bem-vindo ao PassGuard!",
+      })
+      // Não damos setLoading(false) pois o useEffect fará o redirecionamento
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -118,34 +132,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleConfirmVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    if (user && firestore) {
-      try {
-        await setDoc(doc(firestore, "users", user.uid), {
-          id: user.uid,
-          externalUserId: user.uid,
-          email: user.email,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          twoFactorEnabled: false
-        })
-        
-        toast({
-          title: "Conta Verificada!",
-          description: "Seu perfil foi configurado com sucesso.",
-        })
-        router.push("/dashboard")
-      } catch (err) {
-        console.error(err)
-      }
-    } else {
-      setStep("login")
-    }
-    setLoading(false)
-  }
 
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
@@ -215,7 +201,6 @@ export default function LoginPage() {
               {step === "login" && "Enter your credentials to access your secure vault."}
               {step === "register" && "Join PassGuard and start protecting your digital life."}
               {step === "2fa" && "Digite o código gerado no seu Google Authenticator para continuar."}
-              {step === "verify-account" && `Digite o código de 6 dígitos enviado para ${formData.email || 'seu e-mail'}.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -373,47 +358,6 @@ export default function LoginPage() {
               </form>
             )}
 
-            {step === "verify-account" && (
-              <form onSubmit={handleConfirmVerification} className="space-y-6 py-2">
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                      <Mail className="w-8 h-8" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="v-code" className="text-center block">Código de Confirmação</Label>
-                    <Input 
-                      id="v-code" 
-                      type="text" 
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      placeholder="000000" 
-                      className="text-center text-2xl tracking-[0.5em] font-mono h-14"
-                      value={verifyCode}
-                      onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-3">
-                  <Button className="w-full h-11" disabled={loading || verifyCode.length !== 6} type="submit">
-                    {loading ? "Verificando..." : "Confirmar E-mail"}
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    type="button" 
-                    className="w-full text-muted-foreground" 
-                    onClick={() => setStep("register")}
-                    disabled={loading}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Alterar dados
-                  </Button>
-                </div>
-              </form>
-            )}
 
             {step === "2fa" && (
               <form onSubmit={handleVerify2FA} className="space-y-6 py-2">
