@@ -136,18 +136,23 @@ export default function LoginPage() {
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      if (otpCode.length === 6) {
-        router.push("/dashboard")
-      } else {
-        setLoading(false)
-        toast({
-          variant: "destructive",
-          title: "Código Inválido",
-          description: "O código do autenticador está incorreto.",
-        })
-      }
-    }, 800)
+    
+    // Como o 2FA é simulado no MVP, aceitamos qualquer código de 6 dígitos
+    // para permitir que o usuário acesse o dashboard.
+    if (otpCode.length === 6) {
+      toast({
+        title: "Acesso Autorizado",
+        description: "Bem-vindo de volta ao seu cofre.",
+      })
+      router.push("/dashboard")
+    } else {
+      setLoading(false)
+      toast({
+        variant: "destructive",
+        title: "Código Inválido",
+        description: "O código deve ter 6 dígitos.",
+      })
+    }
   }
 
   if (isUserLoading) {

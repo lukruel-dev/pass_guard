@@ -1,8 +1,8 @@
 export const firebaseConfig = {
-  "projectId": "studio-2601402904-32287",
-  "appId": "1:329626950672:web:170815370b190cccb8be95",
-  "apiKey": "AIzaSyCu4BnkefHMzLp-M_KiwGY5tswYREuQQzo",
-  "authDomain": "studio-2601402904-32287.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "329626950672"
+  apiKey: "AIzaSyCa0ddBbrLuF3ypf-RFySQZJtYdjdjwnAI",
+  authDomain: "passguard-c6357.firebaseapp.com",
+  projectId: "passguard-c6357",
+  storageBucket: "passguard-c6357.firebasestorage.app",
+  messagingSenderId: "322429173499",
+  appId: "1:322429173499:web:13921dce2f40818ae33a5e"
 };
