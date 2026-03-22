@@ -10,7 +10,7 @@ import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPl
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn, resendVerificationEmail } from "@/firebase"
+import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn, resendVerificationEmail, initiateSignOut } from "@/firebase"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import Image from "next/image"
 
@@ -215,7 +215,7 @@ export default function LoginPage() {
               {step === "login" && "Acesse seu cofre seguro."}
               {step === "register" && "Proteja sua vida digital hoje."}
               {step === "2fa" && "Digite o código do seu autenticador."}
-              {step === "verify-email" && "Enviamos um link para " + user?.email}
+              {step === "verify-email" && `Enviamos um link para ${user?.email || 'seu e-mail'}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -235,7 +235,16 @@ export default function LoginPage() {
                   <Button variant="outline" onClick={handleResendEmail} className="w-full">
                     Reenviar e-mail de verificação
                   </Button>
-                  <Button variant="ghost" onClick={() => auth?.signOut()} className="w-full">
+                  <Button 
+                    variant="ghost" 
+                    onClick={async () => {
+                      if (auth) {
+                        await initiateSignOut(auth);
+                        setStep("login");
+                      }
+                    }} 
+                    className="w-full"
+                  >
                     Sair e usar outra conta
                   </Button>
                 </div>

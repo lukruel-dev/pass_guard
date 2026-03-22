@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendEmailVerification,
+  signOut,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
@@ -40,4 +41,9 @@ export async function resendVerificationEmail(authInstance: Auth) {
   if (authInstance.currentUser) {
     await sendEmailVerification(authInstance.currentUser);
   }
+}
+
+/** Sign out. */
+export async function initiateSignOut(authInstance: Auth) {
+  return signOut(authInstance);
 }
