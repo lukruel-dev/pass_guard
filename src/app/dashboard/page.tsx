@@ -4,8 +4,9 @@ import * as React from "react"
 import { PasswordCard } from "@/components/PasswordCard"
 import { PasswordForm } from "@/components/PasswordForm"
 import { TwoFactorSetup } from "@/components/TwoFactorSetup"
+import { ProfileMenu } from "@/components/ProfileMenu"
 import { type PasswordEntry } from "@/app/lib/types"
-import { Shield, Search, LogOut, KeyRound, Settings } from "lucide-react"
+import { Shield, Search, LogOut, KeyRound, Settings, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -102,24 +103,19 @@ export default function DashboardPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-primary relative"
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary relative px-2 sm:px-3"
               onClick={() => setShow2FASetup(true)}
             >
               <Settings className="w-4 h-4" />
-              Segurança
+              <span className="hidden xs:inline">Segurança</span>
               {is2FAEnabled && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-background shadow-sm" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-background shadow-sm" />
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShow2FASetup(true)} className="sm:hidden relative">
-              <Settings className="w-5 h-5" />
-              {is2FAEnabled && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background shadow-sm" />
-              )}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
-              <LogOut className="w-5 h-5" />
-            </Button>
+            
+            <div className="w-px h-6 bg-border mx-1" />
+            
+            <ProfileMenu />
           </div>
         </div>
       </header>
