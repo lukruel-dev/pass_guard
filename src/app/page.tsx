@@ -84,7 +84,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Erro no acesso",
-        description: "Credenciais inválidas ou erro de conexão.",
+        description: error.message || "Credenciais inválidas ou erro de conexão.",
       })
       setLoading(false)
     }
@@ -99,7 +99,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Login bloqueado",
-        description: "Erro ao autenticar com Google.",
+        description: error.message || "Erro ao autenticar com Google.",
       })
       setLoading(false)
     }
