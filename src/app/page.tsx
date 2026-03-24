@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
-import { Shield, Lock, Smartphone, Mail, ArrowRight, ArrowLeft, KeyRound, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react"
+import { KeyRound, Mail, Lock, ShieldCheck, ShieldAlert, Shield, Smartphone, ArrowRight, ArrowLeft, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn, resendVerificationEmail, initiateSignOut } from "@/firebase"
+import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn, resendVerificationEmail, initiateSignOut, useMemoFirebase, useDoc } from "@/firebase"
 import { doc, getDoc, setDoc } from "firebase/firestore"
+// @ts-ignore
+import { authenticator } from "otplib"
 import Image from "next/image"
 
 export default function LoginPage() {
@@ -152,26 +154,48 @@ export default function LoginPage() {
     }
   }
 
+  // 2FA Logic
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null
+    return doc(firestore, "users", user.uid)
+  }, [firestore, user])
+  
+  const { data: userProfile } = useDoc<{ twoFactorEnabled: boolean, twoFactorSecret?: string }>(userDocRef)
+
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // NOTA: Para integração real com Google Authenticator, precisaríamos de uma lib como 'otplib'
-    // e validar o segredo salvo no Firestore. Como estamos em um ambiente web estático/PWA,
-    // vamos implementar uma validação que exige um código específico configurado no setup.
-    // Por enquanto, para não travar o usuário, vamos manter a lógica de 6 dígitos, 
-    // mas você deve configurar o segredo no componente TwoFactorSetup.tsx
-    
-    if (otpCode.length === 6) {
-      toast({
-        title: "Acesso Autorizado",
-        description: "Bem-vindo de volta ao seu cofre.",
-      })
-      window.location.href = "/dashboard"
-    } else {
+    if (!userProfile?.twoFactorSecret) {
       toast({
         variant: "destructive",
-        title: "Código Inválido",
-        description: "O código deve ter 6 dígitos.",
+        title: "Erro de Configuração",
+        description: "Segredo 2FA não encontrado. Entre em contato com o suporte.",
+      })
+      return
+    }
+
+    try {
+      const isValid = authenticator.check(otpCode, userProfile.twoFactorSecret)
+      
+      if (isValid) {
+        toast({
+          title: "Acesso Autorizado",
+          description: "Bem-vindo de volta ao seu cofre.",
+        })
+        window.location.href = "/dashboard"
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Código Inválido",
+          description: "O código informado está incorreto ou expirou.",
+        })
+      }
+    } catch (err) {
+      console.error("OTP Error:", err)
+      toast({
+        variant: "destructive",
+        title: "Erro na Verificação",
+        description: "Não foi possível validar o código 2FA.",
       })
     }
   }

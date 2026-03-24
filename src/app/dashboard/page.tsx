@@ -9,9 +9,9 @@ import { Shield, Search, LogOut, KeyRound, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
 import { collection, doc, query, orderBy } from "firebase/firestore"
-import { signOut } from "firebase/auth"
+import { getAuth, signOut } from "firebase/auth"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -44,12 +44,13 @@ export default function DashboardPage() {
     const colRef = collection(firestore, "users", user.uid, "password_entries")
     const newDocId = crypto.randomUUID()
     
+    const entryData = entry as any
     addDocumentNonBlocking(colRef, {
       id: newDocId,
       userProfileId: user.uid,
       name: entry.name,
       username: entry.username,
-      encryptedPassword: entry.password, // No MVP, salvamos plano mas no campo correto do backend.json
+      encryptedPassword: entryData.password || "", // No MVP, salvamos plano mas no campo correto do backend.json
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     })
@@ -66,11 +67,16 @@ export default function DashboardPage() {
     e.username.toLowerCase().includes(search.toLowerCase())
   )
 
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null
+    return doc(firestore, "users", user.uid)
+  }, [firestore, user])
+  const { data: userProfile } = useDoc<{ twoFactorEnabled: boolean }>(userDocRef)
+  const is2FAEnabled = !!userProfile?.twoFactorEnabled
+
   const handleLogout = async () => {
-    const { auth } = await import('firebase/auth')
-    const { getAuth } = await import('firebase/auth')
-    const currentAuth = getAuth()
-    await signOut(currentAuth)
+    const auth = getAuth()
+    await signOut(auth)
     router.push("/")
   }
 
@@ -96,14 +102,20 @@ export default function DashboardPage() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-primary"
+              className="hidden sm:flex items-center gap-2 text-muted-foreground hover:text-primary relative"
               onClick={() => setShow2FASetup(true)}
             >
               <Settings className="w-4 h-4" />
               Segurança
+              {is2FAEnabled && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-background shadow-sm" />
+              )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShow2FASetup(true)} className="sm:hidden">
+            <Button variant="ghost" size="icon" onClick={() => setShow2FASetup(true)} className="sm:hidden relative">
               <Settings className="w-5 h-5" />
+              {is2FAEnabled && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background shadow-sm" />
+              )}
             </Button>
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
               <LogOut className="w-5 h-5" />
@@ -145,7 +157,7 @@ export default function DashboardPage() {
         {filteredEntries.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEntries.map(entry => (
-              <PasswordCard key={entry.id} entry={{...entry, password: entry.encryptedPassword}} onDelete={deleteEntry} />
+              <PasswordCard key={entry.id} entry={{...entry, password: (entry as any).encryptedPassword}} onDelete={deleteEntry} />
             ))}
           </div>
         ) : (
