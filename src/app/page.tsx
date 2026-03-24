@@ -231,10 +231,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 rounded-2xl bg-card border border-primary/20 flex items-center justify-center shadow-2xl mb-4 overflow-hidden">
-            <Image src={logoUrl} alt="Logo" width={80} height={80} className="object-cover" />
+          <div className="w-24 h-24 rounded-3xl bg-card border-2 border-primary/30 flex items-center justify-center shadow-xl mb-4 overflow-hidden group hover:border-primary/60 transition-colors">
+            <Image src={logoUrl} alt="Logo" width={96} height={96} className="object-cover" />
           </div>
-          <h1 className="text-4xl font-headline font-black tracking-tight text-white mb-2">PassGuard</h1>
+          <h1 className="text-4xl sm:text-5xl font-headline font-black tracking-tight text-foreground mb-1 drop-shadow-sm" style={{ WebkitTextStroke: '0.5px hsl(var(--foreground)/0.1)' }}>
+            PassGuard
+          </h1>
+          <div className="h-1 w-12 bg-primary rounded-full" />
         </div>
 
         <Card className="border-primary/10 shadow-2xl bg-card/80 backdrop-blur">
