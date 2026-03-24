@@ -9,8 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from "@/hooks/use-toast"
 import { useUser, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase"
 import { doc } from "firebase/firestore"
-// @ts-ignore
-import { authenticator } from "otplib"
+import * as OTPAuth from "otpauth"
 
 interface TwoFactorSetupProps {
   open: boolean
@@ -37,14 +36,20 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
 
   React.useEffect(() => {
     if (open && !isEnabled && !secret) {
-      // Generate a new secret ONLY if not already enabled and opening for first time
-      setSecret(authenticator.generateSecret())
+      // Generate a new secure random secret using otpauth
+      const newSecret = new OTPAuth.Secret()
+      setSecret(newSecret.base32)
     }
   }, [open, isEnabled, secret])
 
   const otpAuthUrl = React.useMemo(() => {
     if (!secret || !user) return ""
-    return authenticator.keyuri(user.email || "user", "PassGuard", secret)
+    const totp = new OTPAuth.TOTP({
+      issuer: "PassGuard",
+      label: user.email || "user",
+      secret: secret
+    })
+    return totp.toString()
   }, [secret, user])
 
   const handleCopySecret = () => {

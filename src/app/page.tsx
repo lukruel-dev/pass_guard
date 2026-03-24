@@ -12,8 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useAuth, useUser, useFirestore, initiateEmailSignIn, initiateEmailSignUp, initiateGoogleSignIn, resendVerificationEmail, initiateSignOut, useMemoFirebase, useDoc } from "@/firebase"
 import { doc, getDoc, setDoc } from "firebase/firestore"
-// @ts-ignore
-import { authenticator } from "otplib"
+import * as OTPAuth from "otpauth"
 import Image from "next/image"
 
 export default function LoginPage() {
@@ -175,9 +174,20 @@ export default function LoginPage() {
     }
 
     try {
-      const isValid = authenticator.check(otpCode, userProfile.twoFactorSecret)
+      if (!userProfile?.twoFactorSecret) {
+        throw new Error("Secret missing")
+      }
       
-      if (isValid) {
+      const totp = new OTPAuth.TOTP({
+        secret: userProfile.twoFactorSecret
+      })
+      
+      const delta = totp.validate({
+        token: otpCode,
+        window: 1 // Permite um delta de 30s para compensar relógios levemente dessincronizados
+      })
+      
+      if (delta !== null) {
         toast({
           title: "Acesso Autorizado",
           description: "Bem-vindo de volta ao seu cofre.",
