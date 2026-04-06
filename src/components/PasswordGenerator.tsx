@@ -1,26 +1,70 @@
 "use client"
 
 import * as React from "react"
-import { generateCustomPassword, type GenerateCustomPasswordInput } from "@/ai/flows/generate-custom-password-flow"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { Shield, RefreshCcw, Copy, Check, Eye, EyeOff, Loader2 } from "lucide-react"
+import { Shield, RefreshCcw, Copy, Check, Eye, EyeOff } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface PasswordGeneratorProps {
   onApply?: (password: string) => void
 }
 
+interface PasswordOptions {
+  length: number
+  minSpecialChars: number
+  minUppercase: number
+  minLowercase: number
+  minDigits: number
+}
+
+function generatePasswordLocally(options: PasswordOptions): string {
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const digits = '0123456789'
+  const specials = '!@#$%^&*()-_+=[]{}|;:,.<>/?'
+
+  const chars: string[] = []
+
+  // Add required minimums
+  for (let i = 0; i < options.minLowercase; i++) {
+    chars.push(lowercase[Math.floor(Math.random() * lowercase.length)])
+  }
+  for (let i = 0; i < options.minUppercase; i++) {
+    chars.push(uppercase[Math.floor(Math.random() * uppercase.length)])
+  }
+  for (let i = 0; i < options.minDigits; i++) {
+    chars.push(digits[Math.floor(Math.random() * digits.length)])
+  }
+  for (let i = 0; i < options.minSpecialChars; i++) {
+    chars.push(specials[Math.floor(Math.random() * specials.length)])
+  }
+
+  // Fill remaining length with random characters from all pools
+  const allChars = lowercase + uppercase + digits + specials
+  const remaining = Math.max(0, options.length - chars.length)
+  for (let i = 0; i < remaining; i++) {
+    chars.push(allChars[Math.floor(Math.random() * allChars.length)])
+  }
+
+  // Fisher-Yates shuffle for proper randomization
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+
+  return chars.join('').substring(0, options.length)
+}
+
 export function PasswordGenerator({ onApply }: PasswordGeneratorProps) {
-  const [loading, setLoading] = React.useState(false)
   const [password, setPassword] = React.useState("")
   const [showPassword, setShowPassword] = React.useState(true)
   const [copied, setCopied] = React.useState(false)
   const { toast } = useToast()
 
-  const [options, setOptions] = React.useState<GenerateCustomPasswordInput>({
+  const [options, setOptions] = React.useState<PasswordOptions>({
     length: 16,
     minSpecialChars: 2,
     minUppercase: 2,
@@ -28,21 +72,9 @@ export function PasswordGenerator({ onApply }: PasswordGeneratorProps) {
     minDigits: 2,
   })
 
-  const generate = async () => {
-    setLoading(true)
-    try {
-      const result = await generateCustomPassword(options)
-      setPassword(result.password)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Generation failed",
-        description: "Could not generate password. Please try again."
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+  const generate = React.useCallback(() => {
+    setPassword(generatePasswordLocally(options))
+  }, [options])
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(password)
@@ -56,7 +88,7 @@ export function PasswordGenerator({ onApply }: PasswordGeneratorProps) {
 
   React.useEffect(() => {
     generate()
-  }, [])
+  }, [generate])
 
   return (
     <div className="space-y-6 bg-card p-6 rounded-xl border shadow-lg">
@@ -92,12 +124,11 @@ export function PasswordGenerator({ onApply }: PasswordGeneratorProps) {
           </Button>
           <Button
             size="icon"
-            variant="primary"
+            variant="default"
             onClick={generate}
-            disabled={loading}
             title="Regenerate password"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+            <RefreshCcw className="w-4 h-4" />
           </Button>
         </div>
       </div>
