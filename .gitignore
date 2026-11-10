@@ -41,6 +41,15 @@ next-env.d.ts
 .env*
 !.env.example
 
+# credentials & secrets
+client_secret*.json
+*secret*.json
+credentials*.json
+service-account*.json
+*.keystore
+*.aab
+*.apk
+
 # firebase
 firebase-debug.log
 firestore-debug.log
