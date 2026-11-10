@@ -41,6 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const signOut = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("passguard_2fa_verified")
+    }
     await supabase.auth.signOut()
     setUser(null)
   }

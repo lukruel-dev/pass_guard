@@ -21,19 +21,14 @@ alter table public.profiles enable row level security;
 
 -- Políticas de RLS para profiles
 drop policy if exists "Users can view own profile" on public.profiles;
-create policy "Users can view own profile"
-  on public.profiles for select
-  using (auth.uid() = id);
-
 drop policy if exists "Users can insert own profile" on public.profiles;
-create policy "Users can insert own profile"
-  on public.profiles for insert
-  with check (auth.uid() = id);
-
 drop policy if exists "Users can update own profile" on public.profiles;
-create policy "Users can update own profile"
-  on public.profiles for update
-  using (auth.uid() = id);
+drop policy if exists "Users can manage own profile" on public.profiles;
+
+create policy "Users can manage own profile"
+  on public.profiles for all
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 -- 3. Tabela de Cofre de Senhas (password_entries)
 create table if not exists public.password_entries (

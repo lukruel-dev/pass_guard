@@ -29,6 +29,9 @@ export function ProfileMenu() {
   const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U"
 
   const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("passguard_2fa_verified")
+    }
     await signOut()
     router.push("/")
   }

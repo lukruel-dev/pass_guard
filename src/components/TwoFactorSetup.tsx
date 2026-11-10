@@ -92,6 +92,10 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
 
       if (error) throw error
 
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("passguard_2fa_verified", "true")
+      }
+
       setIsEnabled(true)
       setStep(3)
       toast({
@@ -121,6 +125,10 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
         .eq("id", user.id)
 
       if (error) throw error
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("passguard_2fa_verified")
+      }
 
       setIsEnabled(false)
       toast({

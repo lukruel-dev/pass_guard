@@ -54,13 +54,18 @@ export default function LoginPage() {
             .eq("id", user.id)
             .maybeSingle()
 
-          if (profile) {
+          if (error) {
+            console.error("Erro ao consultar perfil:", error)
+          }
+
+          if (profile?.two_factor_enabled) {
             setUserProfile(profile)
-            if (profile.two_factor_enabled) {
+            const isVerified = typeof window !== "undefined" && sessionStorage.getItem("passguard_2fa_verified") === "true"
+            if (!isVerified) {
               setStep("2fa")
               return
             }
-          } else {
+          } else if (!profile && !error) {
             // Cria perfil básico se não existir via trigger
             await supabase.from("profiles").upsert({
               id: user.id,
@@ -219,6 +224,9 @@ export default function LoginPage() {
       })
       
       if (delta !== null) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("passguard_2fa_verified", "true")
+        }
         toast({
           title: "Acesso Autorizado",
           description: "Bem-vindo de volta ao seu cofre.",

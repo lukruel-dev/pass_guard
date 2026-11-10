@@ -25,12 +25,38 @@ export default function DashboardPage() {
   const [show2FASetup, setShow2FASetup] = React.useState(false)
   const [is2FAEnabled, setIs2FAEnabled] = React.useState(false)
 
-  // Redireciona se não estiver logado
+  // Redireciona se não estiver logado ou se 2FA não estiver verificado
   React.useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push("/")
+    async function checkAuthAnd2FA() {
+      if (!isUserLoading && !user) {
+        router.push("/")
+        return
+      }
+
+      if (user) {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("two_factor_enabled")
+            .eq("id", user.id)
+            .maybeSingle()
+
+          if (profile?.two_factor_enabled) {
+            setIs2FAEnabled(true)
+            const isVerified = typeof window !== "undefined" && sessionStorage.getItem("passguard_2fa_verified") === "true"
+            if (!isVerified) {
+              router.push("/")
+              return
+            }
+          }
+        } catch (err) {
+          console.error("Erro no guard 2FA:", err)
+        }
+      }
     }
-  }, [user, isUserLoading, router])
+
+    checkAuthAnd2FA()
+  }, [user, isUserLoading, router, supabase])
 
   // Carrega as senhas do Supabase
   const loadEntries = React.useCallback(async () => {
