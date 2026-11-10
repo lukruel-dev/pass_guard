@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -7,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ShieldCheck, Smartphone, Download, CheckCircle2, Copy, Check, Trash2, ShieldAlert } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { useUser, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase"
-import { doc } from "firebase/firestore"
+import { useUser, useSupabase } from "@/lib/supabase"
 import * as OTPAuth from "otpauth"
 
 interface TwoFactorSetupProps {
@@ -19,24 +17,40 @@ interface TwoFactorSetupProps {
 export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   const { toast } = useToast()
   const { user } = useUser()
-  const firestore = useFirestore()
-  
+  const supabase = useSupabase()
+
   const [step, setStep] = React.useState(1)
   const [copied, setCopied] = React.useState(false)
   const [secret, setSecret] = React.useState("")
+  const [isEnabled, setIsEnabled] = React.useState(false)
 
-  // Check if 2FA is already enabled
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null
-    return doc(firestore, "users", user.uid)
-  }, [firestore, user])
-  
-  const { data: userProfile } = useDoc<{ twoFactorEnabled: boolean, twoFactorSecret?: string }>(userDocRef)
-  const isEnabled = !!userProfile?.twoFactorEnabled
+  // Carrega status atual do perfil no Supabase
+  const checkStatus = React.useCallback(async () => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("two_factor_enabled, two_factor_secret")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      if (data) {
+        setIsEnabled(!!data.two_factor_enabled)
+      }
+    } catch (err) {
+      console.error("Erro ao verificar 2FA:", err)
+    }
+  }, [user, supabase])
+
+  React.useEffect(() => {
+    if (open) {
+      checkStatus()
+    }
+  }, [open, checkStatus])
 
   React.useEffect(() => {
     if (open && !isEnabled && !secret) {
-      // Generate a new secure random secret using otpauth
+      // Gera novo segredo seguro em Base32
       const newSecret = new OTPAuth.Secret()
       setSecret(newSecret.base32)
     }
@@ -62,43 +76,70 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
     })
   }
 
-  const handleEnable = () => {
-    if (user && firestore && secret) {
-      const userRef = doc(firestore, "users", user.uid)
-      updateDocumentNonBlocking(userRef, {
-        twoFactorEnabled: true,
-        twoFactorSecret: secret,
-        updatedAt: new Date().toISOString()
-      })
-      
+  const handleEnable = async () => {
+    if (!user || !secret) return
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({
+          id: user.id,
+          email: user.email,
+          two_factor_enabled: true,
+          two_factor_secret: secret,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) throw error
+
+      setIsEnabled(true)
       setStep(3)
       toast({
         title: "Proteção Ativada!",
-        description: "Sua conta agora tem uma camada extra de segurança sincronizada na nuvem.",
+        description: "Sua conta agora tem uma camada extra de segurança no Supabase.",
+      })
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao ativar 2FA",
+        description: err.message || "Não foi possível salvar as configurações.",
       })
     }
   }
 
-  const handleDisable = () => {
-    if (user && firestore) {
-      const userRef = doc(firestore, "users", user.uid)
-      updateDocumentNonBlocking(userRef, {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-        updatedAt: new Date().toISOString()
-      })
-      
+  const handleDisable = async () => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          two_factor_enabled: false,
+          two_factor_secret: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id)
+
+      if (error) throw error
+
+      setIsEnabled(false)
       toast({
         title: "Proteção Desativada",
         description: "A autenticação de dois fatores foi removida da sua conta.",
       })
       onOpenChange(false)
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err.message || "Não foi possível desativar.",
+      })
     }
   }
 
   const reset = () => {
     setStep(1)
-    setSecret("") // Reset secret for next time
+    setSecret("")
     onOpenChange(false)
   }
 
@@ -113,8 +154,8 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
             {isEnabled ? "Proteção Ativa" : "Dupla Proteção"}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {isEnabled 
-              ? "Sua conta está protegida por 2FA." 
+            {isEnabled
+              ? "Sua conta está protegida por 2FA."
               : "Adicione uma camada extra de segurança usando o seu autenticador favorito."}
           </DialogDescription>
         </DialogHeader>
@@ -129,7 +170,7 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                   Seu vault exige um código 6-dígitos para cada novo login.
                 </p>
               </div>
-              
+
               <div className="bg-destructive/5 p-4 rounded-lg border border-destructive/10">
                 <h4 className="font-semibold text-destructive flex items-center justify-center gap-2 mb-2">
                   <ShieldAlert className="w-4 h-4" /> Zona de Risco
@@ -137,10 +178,10 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                 <p className="text-xs text-muted-foreground mb-4">
                   Ao desativar, sua conta ficará protegida apenas pela senha principal.
                 </p>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  className="w-full" 
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full"
                   onClick={handleDisable}
                 >
                   <Trash2 className="w-4 h-4 mr-2" /> Desativar 2FA
@@ -184,7 +225,7 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                       Abra o autenticador e leia este código para gerar seus tokens:
                     </p>
                   </div>
-                  
+
                   <div className="p-4 bg-white rounded-xl shadow-inner border">
                     <QRCodeSVG value={otpAuthUrl} size={180} />
                   </div>

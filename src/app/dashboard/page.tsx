@@ -6,82 +6,155 @@ import { PasswordForm } from "@/components/PasswordForm"
 import { TwoFactorSetup } from "@/components/TwoFactorSetup"
 import { ProfileMenu } from "@/components/ProfileMenu"
 import { type PasswordEntry } from "@/app/lib/types"
-import { Shield, Search, LogOut, KeyRound, Settings, User } from "lucide-react"
+import { Shield, Search, KeyRound, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase"
-import { collection, doc, query, orderBy } from "firebase/firestore"
-import { getAuth, signOut } from "firebase/auth"
+import { useUser, useSupabase } from "@/lib/supabase"
+import { useToast } from "@/hooks/use-toast"
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const { user, isUserLoading } = useUser()
-  const firestore = useFirestore()
+  const supabase = useSupabase()
   
+  const [entries, setEntries] = React.useState<PasswordEntry[]>([])
+  const [isEntriesLoading, setIsEntriesLoading] = React.useState(true)
   const [search, setSearch] = React.useState("")
   const [show2FASetup, setShow2FASetup] = React.useState(false)
+  const [is2FAEnabled, setIs2FAEnabled] = React.useState(false)
 
-  // Consulta as senhas do Firestore
-  const entriesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null
-    return query(
-      collection(firestore, "users", user.uid, "password_entries"),
-      orderBy("createdAt", "desc")
-    )
-  }, [firestore, user])
-
-  const { data: entries, isLoading: isEntriesLoading } = useCollection<PasswordEntry>(entriesQuery)
-
+  // Redireciona se não estiver logado
   React.useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/")
     }
   }, [user, isUserLoading, router])
 
-  const addEntry = (entry: Omit<PasswordEntry, "id" | "userProfileId" | "createdAt" | "updatedAt">) => {
-    if (!firestore || !user) return
+  // Carrega as senhas do Supabase
+  const loadEntries = React.useCallback(async () => {
+    if (!user) return
+    try {
+      setIsEntriesLoading(true)
+      const { data, error } = await supabase
+        .from("password_entries")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
 
-    const colRef = collection(firestore, "users", user.uid, "password_entries")
-    const newDocId = crypto.randomUUID()
-    
-    const entryData = entry as any
-    addDocumentNonBlocking(colRef, {
-      id: newDocId,
-      userProfileId: user.uid,
-      name: entry.name,
-      username: entry.username,
-      encryptedPassword: entryData.password || "", // No MVP, salvamos plano mas no campo correto do backend.json
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    })
+      if (error) throw error
+      setEntries(data || [])
+    } catch (err: any) {
+      console.error("Erro ao carregar senhas:", err)
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar senhas",
+        description: err.message || "Não foi possível sincronizar o cofre.",
+      })
+    } finally {
+      setIsEntriesLoading(false)
+    }
+  }, [user, supabase, toast])
+
+  // Carrega status 2FA
+  const loadProfile = React.useCallback(async () => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("two_factor_enabled")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      if (data) {
+        setIs2FAEnabled(!!data.two_factor_enabled)
+      }
+    } catch (err) {
+      console.error("Erro ao carregar perfil:", err)
+    }
+  }, [user, supabase])
+
+  React.useEffect(() => {
+    if (user) {
+      loadEntries()
+      loadProfile()
+    }
+  }, [user, loadEntries, loadProfile])
+
+  const addEntry = async (entry: Omit<PasswordEntry, "id" | "createdAt" | "created_at">) => {
+    if (!user) return
+
+    try {
+      const passwordValue = (entry as any).password || entry.encrypted_password || entry.encryptedPassword || ""
+      const newEntry = {
+        user_id: user.id,
+        name: entry.name,
+        username: entry.username,
+        encrypted_password: passwordValue,
+        url: entry.url || "",
+        notes: entry.notes || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from("password_entries")
+        .insert(newEntry)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        setEntries(prev => [data, ...prev])
+      }
+      toast({
+        title: "Senha Salva",
+        description: `${entry.name} foi guardado com sucesso.`,
+      })
+    } catch (err: any) {
+      console.error("Erro ao salvar senha:", err)
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: err.message || "Falha ao gravar no Supabase.",
+      })
+    }
   }
 
-  const deleteEntry = (id: string) => {
-    if (!firestore || !user) return
-    const docRef = doc(firestore, "users", user.uid, "password_entries", id)
-    deleteDocumentNonBlocking(docRef)
+  const deleteEntry = async (id: string) => {
+    if (!user) return
+    try {
+      const { error } = await supabase
+        .from("password_entries")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id)
+
+      if (error) throw error
+
+      setEntries(prev => prev.filter(e => e.id !== id))
+      toast({
+        title: "Removido",
+        description: "Entrada excluída do cofre.",
+      })
+    } catch (err: any) {
+      console.error("Erro ao deletar senha:", err)
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err.message || "Não foi possível deletar o registro.",
+      })
+    }
   }
 
-  const filteredEntries = (entries || []).filter(e => 
+  const filteredEntries = entries.filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase()) || 
     e.username.toLowerCase().includes(search.toLowerCase())
   )
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null
-    return doc(firestore, "users", user.uid)
-  }, [firestore, user])
-  const { data: userProfile } = useDoc<{ twoFactorEnabled: boolean }>(userDocRef)
-  const is2FAEnabled = !!userProfile?.twoFactorEnabled
-
-  const handleLogout = async () => {
-    const auth = getAuth()
-    await signOut(auth)
-    router.push("/")
-  }
-
-  if (isUserLoading || isEntriesLoading) {
+  if (isUserLoading || (isEntriesLoading && entries.length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <KeyRound className="w-12 h-12 text-primary animate-pulse" />
@@ -123,8 +196,8 @@ export default function DashboardPage() {
       <main className="container max-w-6xl mx-auto px-4 mt-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-headline font-bold">My Vault</h1>
-            <p className="text-muted-foreground mt-1">Manage and protect your online credentials.</p>
+            <h1 className="text-3xl font-headline font-bold">Meu Cofre</h1>
+            <p className="text-muted-foreground mt-1">Gerencie e proteja suas credenciais na nuvem Supabase.</p>
           </div>
           <PasswordForm onAdd={addEntry} />
         </div>
@@ -135,14 +208,14 @@ export default function DashboardPage() {
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Entries</p>
-              <p className="font-bold text-xl">{entries?.length || 0}</p>
+              <p className="text-sm text-muted-foreground">Entradas salvas</p>
+              <p className="font-bold text-xl">{entries.length}</p>
             </div>
           </div>
           <div className="sm:col-span-2 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search passwords..."
+              placeholder="Buscar senhas ou serviços..."
               className="pl-10 h-full bg-card"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -153,7 +226,11 @@ export default function DashboardPage() {
         {filteredEntries.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEntries.map(entry => (
-              <PasswordCard key={entry.id} entry={{...entry, password: (entry as any).encryptedPassword}} onDelete={deleteEntry} />
+              <PasswordCard 
+                key={entry.id} 
+                entry={entry} 
+                onDelete={deleteEntry} 
+              />
             ))}
           </div>
         ) : (
@@ -161,9 +238,9 @@ export default function DashboardPage() {
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
               <KeyRound className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold">No passwords found</h3>
+            <h3 className="text-lg font-semibold">Nenhuma senha encontrada</h3>
             <p className="text-muted-foreground mt-1">
-              {search ? "Try a different search term" : "Add your first password to get started"}
+              {search ? "Tente outro termo de busca" : "Adicione sua primeira senha para começar"}
             </p>
             {!search && (
                <div className="mt-6">
@@ -174,7 +251,13 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <TwoFactorSetup open={show2FASetup} onOpenChange={setShow2FASetup} />
+      <TwoFactorSetup 
+        open={show2FASetup} 
+        onOpenChange={(open) => {
+          setShow2FASetup(open)
+          if (!open) loadProfile()
+        }} 
+      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AuthProvider } from '@/lib/supabase';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -10,7 +10,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const version = "16"; // Incremented version to bust cache
+  const version = "17"; // Incremented version to bust cache
   
   return (
     <html lang="pt-BR" suppressHydrationWarning>
@@ -36,10 +36,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <FirebaseClientProvider>
+          <AuthProvider>
             {children}
             <Toaster />
-          </FirebaseClientProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

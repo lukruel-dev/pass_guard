@@ -17,13 +17,15 @@ export function PasswordCard({ entry, onDelete }: PasswordCardProps) {
   const [copied, setCopied] = React.useState(false)
   const { toast } = useToast()
 
+  const passwordValue = entry.encrypted_password || entry.encryptedPassword || entry.password || ""
+
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(entry.password)
+    navigator.clipboard.writeText(passwordValue)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
     toast({
-      title: "Copied",
-      description: `${entry.name} password copied to clipboard.`
+      title: "Copiado",
+      description: `Senha de ${entry.name} copiada para a área de transferência.`
     })
   }
 
@@ -51,7 +53,7 @@ export function PasswordCard({ entry, onDelete }: PasswordCardProps) {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              value={entry.password}
+              value={passwordValue}
               readOnly
               className="w-full bg-background border-none rounded p-2 pr-20 text-sm font-mono focus:ring-1 focus:ring-primary/30 outline-none"
             />
