@@ -19,7 +19,25 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser()
   
   const [loading, setLoading] = React.useState(false)
-  const [step, setStep] = React.useState<"login" | "2fa" | "register" | "verify-email">("login")
+  const [step, setStepState] = React.useState<"login" | "2fa" | "register" | "verify-email">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("passguard_auth_step")
+      if (saved === "2fa" || saved === "verify-email") return saved as any
+    }
+    return "login"
+  })
+
+  const setStep = React.useCallback((newStep: "login" | "2fa" | "register" | "verify-email") => {
+    setStepState(newStep)
+    if (typeof window !== "undefined") {
+      if (newStep === "2fa" || newStep === "verify-email") {
+        localStorage.setItem("passguard_auth_step", newStep)
+      } else {
+        localStorage.removeItem("passguard_auth_step")
+      }
+    }
+  }, [])
+
   const [otpCode, setOtpCode] = React.useState("")
   
   const [showPassword, setShowPassword] = React.useState(false)
@@ -115,10 +133,11 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     try {
+      const redirectOrigin = typeof window !== "undefined" ? window.location.origin : "https://pass-guard-eight.vercel.app"
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${redirectOrigin}/`
         }
       })
       if (error) throw error
@@ -243,6 +262,7 @@ export default function LoginPage() {
       if (delta !== null) {
         if (typeof window !== "undefined") {
           sessionStorage.setItem("passguard_2fa_verified", "true")
+          localStorage.removeItem("passguard_auth_step")
         }
         toast({
           title: "Acesso Autorizado",
@@ -407,6 +427,7 @@ export default function LoginPage() {
                       onClick={async () => {
                         if (typeof window !== "undefined") {
                           sessionStorage.removeItem("passguard_2fa_verified")
+                          localStorage.removeItem("passguard_auth_step")
                         }
                         await supabase.auth.signOut()
                         setStep("login")

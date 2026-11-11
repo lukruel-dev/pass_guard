@@ -19,9 +19,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Obter usuário atual
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user ?? null)
+    // 1. Obter sessão instantânea do cache local (0ms, sem bloquear requisição de rede)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
       setIsLoading(false)
     }).catch(() => {
       setIsLoading(false)
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("passguard_2fa_verified")
+      localStorage.removeItem("passguard_auth_step")
     }
     await supabase.auth.signOut()
     setUser(null)

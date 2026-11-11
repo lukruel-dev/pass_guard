@@ -31,6 +31,7 @@ export function ProfileMenu() {
   const handleLogout = async () => {
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("passguard_2fa_verified")
+      localStorage.removeItem("passguard_auth_step")
     }
     await signOut()
     router.push("/")
