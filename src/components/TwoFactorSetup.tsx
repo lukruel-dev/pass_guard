@@ -51,13 +51,48 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
     }
   }, [open, checkStatus])
 
-  React.useEffect(() => {
-    if (open && !isEnabled && !secret) {
-      // Gera novo segredo seguro em Base32
-      const newSecret = new OTPAuth.Secret()
-      setSecret(newSecret.base32)
+  // Gera novo segredo persistido
+  const generateNewSecret = React.useCallback(() => {
+    if (!user) return
+    const newSecret = new OTPAuth.Secret().base32
+    setSecret(newSecret)
+    setConfirmToken("")
+    setStep(2)
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`passguard_pending_2fa_secret_${user.id}`, newSecret)
+      localStorage.setItem(`passguard_setup_step_${user.id}`, "2")
     }
-  }, [open, isEnabled, secret])
+  }, [user])
+
+  // Recupera segredo e passo pendentes do localStorage para não reiniciar ao alternar apps
+  React.useEffect(() => {
+    if (!user || isEnabled || typeof window === "undefined") return
+
+    const pendingSecret = localStorage.getItem(`passguard_pending_2fa_secret_${user.id}`)
+    const savedStep = localStorage.getItem(`passguard_setup_step_${user.id}`)
+
+    if (pendingSecret) {
+      setSecret(pendingSecret)
+      if (savedStep) {
+        setStep(parseInt(savedStep, 10))
+      } else {
+        setStep(2)
+      }
+    }
+  }, [user, isEnabled, open])
+
+  React.useEffect(() => {
+    if (open && !isEnabled && !secret && user) {
+      if (typeof window !== "undefined") {
+        const pending = localStorage.getItem(`passguard_pending_2fa_secret_${user.id}`)
+        if (pending) {
+          setSecret(pending)
+          return
+        }
+      }
+      generateNewSecret()
+    }
+  }, [open, isEnabled, secret, user, generateNewSecret])
 
   const otpAuthUrl = React.useMemo(() => {
     if (!secret || !user) return ""
@@ -76,6 +111,18 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
     toast({
       title: "Copiado!",
       description: "Chave manual copiada para a área de transferência.",
+    })
+  }
+
+  const handleRegenerate = () => {
+    if (user && typeof window !== "undefined") {
+      localStorage.removeItem(`passguard_pending_2fa_secret_${user.id}`)
+      localStorage.removeItem(`passguard_setup_step_${user.id}`)
+    }
+    generateNewSecret()
+    toast({
+      title: "Novo QR Code gerado",
+      description: "Um novo segredo foi gerado. Atualize no seu autenticador.",
     })
   }
 
@@ -122,7 +169,10 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
       if (error) throw error
 
       if (typeof window !== "undefined") {
+        localStorage.setItem(`passguard_2fa_verified_${user.id}`, "true")
         sessionStorage.setItem("passguard_2fa_verified", "true")
+        localStorage.removeItem(`passguard_pending_2fa_secret_${user.id}`)
+        localStorage.removeItem(`passguard_setup_step_${user.id}`)
       }
 
       setIsEnabled(true)
@@ -156,7 +206,10 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
       if (error) throw error
 
       if (typeof window !== "undefined") {
+        localStorage.removeItem(`passguard_2fa_verified_${user.id}`)
         sessionStorage.removeItem("passguard_2fa_verified")
+        localStorage.removeItem(`passguard_pending_2fa_secret_${user.id}`)
+        localStorage.removeItem(`passguard_setup_step_${user.id}`)
       }
 
       setIsEnabled(false)
@@ -175,8 +228,13 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   }
 
   const reset = () => {
+    if (user && typeof window !== "undefined") {
+      localStorage.removeItem(`passguard_pending_2fa_secret_${user.id}`)
+      localStorage.removeItem(`passguard_setup_step_${user.id}`)
+    }
     setStep(1)
     setSecret("")
+    setConfirmToken("")
     onOpenChange(false)
   }
 
@@ -267,11 +325,19 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                     <QRCodeSVG value={otpAuthUrl} size={180} />
                   </div>
 
+                  <div className="w-full space-y-2">
+                    <Button variant="outline" asChild className="w-full border-primary/30 hover:bg-primary/5">
+                      <a href={otpAuthUrl}>
+                        <Smartphone className="w-4 h-4 mr-2 text-primary" /> Abrir no Google Authenticator
+                      </a>
+                    </Button>
+                  </div>
+
                   <div className="w-full bg-muted/30 p-3 rounded text-center border border-dashed border-primary/30 relative">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Chave Manual</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Chave Manual (ou copie aqui)</p>
                     <div className="flex items-center justify-center gap-2">
-                      <code className="text-sm font-mono font-bold text-primary">{secret}</code>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopySecret}>
+                      <code className="text-sm font-mono font-bold text-primary break-all">{secret}</code>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleCopySecret}>
                         {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                       </Button>
                     </div>
@@ -294,6 +360,27 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                   <Button className="w-full" disabled={confirmToken.length !== 6} onClick={handleEnable}>
                     Confirmar e Ativar 2FA
                   </Button>
+
+                  <div className="flex items-center justify-between w-full pt-1">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={handleRegenerate}
+                    >
+                      Gerar outro QR Code
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                      onClick={reset}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
               )}
 

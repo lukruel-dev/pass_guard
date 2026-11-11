@@ -54,6 +54,17 @@ export default function LoginPage() {
   const logoUrl = "https://i.postimg.cc/cJQrd2f6/Gemini-Generated-Image-fczyflfczyflfczy.png";
 
   React.useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("error=auth_callback_failed")) {
+      toast({
+        variant: "destructive",
+        title: "Falha na autenticação",
+        description: "Não foi possível validar o login com Google. Tente novamente.",
+      })
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [toast])
+
+  React.useEffect(() => {
     async function checkSecurity() {
       if (!user) return
 
@@ -64,45 +75,46 @@ export default function LoginPage() {
       }
 
       // 2. Verificar 2FA no Supabase
-      if (step !== "2fa") {
-        try {
-          const { data: profile, error } = await supabase
-            .from("profiles")
-            .select("two_factor_enabled, two_factor_secret")
-            .eq("id", user.id)
-            .maybeSingle()
+      try {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("two_factor_enabled, two_factor_secret")
+          .eq("id", user.id)
+          .maybeSingle()
 
-          if (error) {
-            console.error("Erro ao consultar perfil:", error)
-          }
-
-          if (profile?.two_factor_enabled) {
-            setUserProfile(profile)
-            const isVerified = typeof window !== "undefined" && sessionStorage.getItem("passguard_2fa_verified") === "true"
-            if (!isVerified) {
-              setStep("2fa")
-              return
-            }
-          } else if (!profile && !error) {
-            // Cria perfil básico se não existir via trigger
-            await supabase.from("profiles").upsert({
-              id: user.id,
-              email: user.email,
-              two_factor_enabled: false
-            })
-          }
-          router.push("/dashboard")
-        } catch (err) {
-          console.error("Erro ao verificar perfil:", err)
-          router.push("/dashboard")
+        if (error) {
+          console.error("Erro ao consultar perfil:", error)
         }
+
+        if (profile?.two_factor_enabled) {
+          setUserProfile(profile)
+          const isVerified = typeof window !== "undefined" && (
+            localStorage.getItem(`passguard_2fa_verified_${user.id}`) === "true" ||
+            sessionStorage.getItem("passguard_2fa_verified") === "true"
+          )
+          if (!isVerified) {
+            setStep("2fa")
+            return
+          }
+        } else if (!profile && !error) {
+          // Cria perfil básico se não existir via trigger
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            email: user.email,
+            two_factor_enabled: false
+          })
+        }
+        router.push("/dashboard")
+      } catch (err) {
+        console.error("Erro ao verificar perfil:", err)
+        router.push("/dashboard")
       }
     }
 
     if (!isUserLoading && user) {
       checkSecurity()
     }
-  }, [user, isUserLoading, router, step, supabase])
+  }, [user, isUserLoading, router, supabase, setStep])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -137,7 +149,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${redirectOrigin}/`
+          redirectTo: `${redirectOrigin}/auth/callback`
         }
       })
       if (error) throw error
@@ -261,6 +273,9 @@ export default function LoginPage() {
       
       if (delta !== null) {
         if (typeof window !== "undefined") {
+          if (user?.id) {
+            localStorage.setItem(`passguard_2fa_verified_${user.id}`, "true")
+          }
           sessionStorage.setItem("passguard_2fa_verified", "true")
           localStorage.removeItem("passguard_auth_step")
         }
@@ -286,12 +301,19 @@ export default function LoginPage() {
     }
   }
 
-  if (isUserLoading) {
+  const isAuthCodeInUrl = typeof window !== "undefined" && (
+    window.location.search.includes("code=") || 
+    window.location.hash.includes("access_token=")
+  )
+
+  if (isUserLoading || isAuthCodeInUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <KeyRound className="w-12 h-12 text-primary animate-pulse" />
-          <p className="text-muted-foreground animate-pulse">Sincronizando Cofre com Supabase...</p>
+          <p className="text-muted-foreground animate-pulse">
+            {isAuthCodeInUrl ? "Autenticando com Google..." : "Sincronizando Cofre com Supabase..."}
+          </p>
         </div>
       </div>
     )
@@ -426,6 +448,9 @@ export default function LoginPage() {
                       className="w-full text-muted-foreground hover:text-foreground"
                       onClick={async () => {
                         if (typeof window !== "undefined") {
+                          if (user?.id) {
+                            localStorage.removeItem(`passguard_2fa_verified_${user.id}`)
+                          }
                           sessionStorage.removeItem("passguard_2fa_verified")
                           localStorage.removeItem("passguard_auth_step")
                         }

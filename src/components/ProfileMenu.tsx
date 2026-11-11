@@ -30,6 +30,9 @@ export function ProfileMenu() {
 
   const handleLogout = async () => {
     if (typeof window !== "undefined") {
+      if (user?.id) {
+        localStorage.removeItem(`passguard_2fa_verified_${user.id}`)
+      }
       sessionStorage.removeItem("passguard_2fa_verified")
       localStorage.removeItem("passguard_auth_step")
     }

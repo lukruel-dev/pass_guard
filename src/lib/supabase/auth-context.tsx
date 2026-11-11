@@ -19,29 +19,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Obter sessão instantânea do cache local (0ms, sem bloquear requisição de rede)
+    const hasAuthCode = typeof window !== "undefined" && (
+      window.location.search.includes("code=") || 
+      window.location.hash.includes("access_token=")
+    )
+
+    // 1. Obter sessão instantânea do cache local
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setIsLoading(false)
+      if (session?.user) {
+        setUser(session.user)
+        setIsLoading(false)
+      } else if (!hasAuthCode) {
+        setUser(null)
+        setIsLoading(false)
+      }
     }).catch(() => {
-      setIsLoading(false)
+      if (!hasAuthCode) setIsLoading(false)
     })
 
-    // 2. Escutar eventos de auth (login, logout, token refresh)
+    // Timeout de segurança caso o code seja inválido ou o redirecionamento demore
+    const timeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 4000)
+
+    // 2. Escutar eventos de auth (login, logout, token refresh, OAuth)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setIsLoading(false)
+      clearTimeout(timeout)
     })
 
     return () => {
+      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [supabase])
 
   const signOut = async () => {
     if (typeof window !== "undefined") {
+      if (user?.id) {
+        localStorage.removeItem(`passguard_2fa_verified_${user.id}`)
+        localStorage.removeItem(`passguard_pending_2fa_secret_${user.id}`)
+        localStorage.removeItem(`passguard_setup_step_${user.id}`)
+      }
       sessionStorage.removeItem("passguard_2fa_verified")
       localStorage.removeItem("passguard_auth_step")
     }

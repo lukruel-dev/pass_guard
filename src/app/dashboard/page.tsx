@@ -25,6 +25,16 @@ export default function DashboardPage() {
   const [show2FASetup, setShow2FASetup] = React.useState(false)
   const [is2FAEnabled, setIs2FAEnabled] = React.useState(false)
 
+  // Reabre modal de 2FA automaticamente se havia configuração pendente ao alternar apps
+  React.useEffect(() => {
+    if (user && typeof window !== "undefined") {
+      const pendingSecret = localStorage.getItem(`passguard_pending_2fa_secret_${user.id}`)
+      if (pendingSecret) {
+        setShow2FASetup(true)
+      }
+    }
+  }, [user])
+
   // Redireciona se não estiver logado ou se 2FA não estiver verificado
   React.useEffect(() => {
     async function checkAuthAnd2FA() {
@@ -43,7 +53,10 @@ export default function DashboardPage() {
 
           if (profile?.two_factor_enabled) {
             setIs2FAEnabled(true)
-            const isVerified = typeof window !== "undefined" && sessionStorage.getItem("passguard_2fa_verified") === "true"
+            const isVerified = typeof window !== "undefined" && (
+              localStorage.getItem(`passguard_2fa_verified_${user.id}`) === "true" ||
+              sessionStorage.getItem("passguard_2fa_verified") === "true"
+            )
             if (!isVerified) {
               router.push("/")
               return
