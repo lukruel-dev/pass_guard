@@ -251,9 +251,10 @@ export default function LoginPage() {
     }
   }
 
-  const handleVerify2FA = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const executeVerify2FA = async (codeToVerify: string) => {
+    if (!codeToVerify || codeToVerify.length !== 6 || loading) return
+
+    setLoading(true)
     try {
       // Re-consulta o perfil atualizado do Supabase
       const { data: freshProfile } = await supabase
@@ -278,18 +279,19 @@ export default function LoginPage() {
           title: "Erro de Configuração",
           description: "Segredo 2FA não encontrado. Redefina o 2FA.",
         })
+        setLoading(false)
         return
       }
 
       const totp = new OTPAuth.TOTP({
         secret: activeSecret
       })
-      
+
       const delta = totp.validate({
-        token: otpCode.trim(),
+        token: codeToVerify.trim(),
         window: 2 // Permite tolerância de até +/- 60 segundos para compensar relógios
       })
-      
+
       if (delta !== null) {
         if (typeof window !== "undefined") {
           if (user?.id) {
@@ -309,6 +311,7 @@ export default function LoginPage() {
           title: "Código Inválido",
           description: "O código informado está incorreto ou expirou. Verifique o relógio do celular.",
         })
+        setLoading(false)
       }
     } catch (err) {
       console.error("OTP Error:", err)
@@ -317,6 +320,20 @@ export default function LoginPage() {
         title: "Erro na Verificação",
         description: "Não foi possível validar o código 2FA.",
       })
+      setLoading(false)
+    }
+  }
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault()
+    executeVerify2FA(otpCode)
+  }
+
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6)
+    setOtpCode(val)
+    if (val.length === 6) {
+      executeVerify2FA(val)
     }
   }
 
@@ -347,13 +364,21 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md relative z-10">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-3xl bg-card border-2 border-primary/30 flex items-center justify-center shadow-xl mb-4 overflow-hidden group hover:border-primary/60 transition-colors">
-            <Image src={logoUrl} alt="Logo" width={96} height={96} className="object-cover" />
+    <div className="min-h-[100dvh] flex flex-col justify-center items-center bg-background px-4 py-4 sm:py-8 overflow-y-auto">
+      <div className="w-full max-w-md relative z-10 my-auto">
+        <div className={`flex flex-col items-center transition-all duration-300 ${step === "2fa" ? "mb-3" : "mb-8"}`}>
+          <div className={`rounded-3xl bg-card border-2 border-primary/30 flex items-center justify-center shadow-xl overflow-hidden group hover:border-primary/60 transition-all ${
+            step === "2fa" ? "w-14 h-14 mb-2" : "w-24 h-24 mb-4"
+          }`}>
+            <Image 
+              src={logoUrl} 
+              alt="Logo" 
+              width={step === "2fa" ? 56 : 96} 
+              height={step === "2fa" ? 56 : 96} 
+              className="object-cover" 
+            />
           </div>
-          <h1 className="text-4xl sm:text-5xl font-headline font-black tracking-tight text-foreground mb-1 drop-shadow-sm" style={{ WebkitTextStroke: '0.5px hsl(var(--foreground)/0.1)' }}>
+          <h1 className={`${step === "2fa" ? "text-2xl" : "text-4xl sm:text-5xl"} font-headline font-black tracking-tight text-foreground mb-1 drop-shadow-sm`} style={{ WebkitTextStroke: '0.5px hsl(var(--foreground)/0.1)' }}>
             PassGuard
           </h1>
           <div className="h-1 w-12 bg-primary rounded-full" />
@@ -455,18 +480,32 @@ export default function LoginPage() {
                 )}
 
                 {step === "2fa" && (
-                  <form onSubmit={handleVerify2FA} className="space-y-6">
+                  <form onSubmit={handleVerify2FA} className="space-y-4">
                     <Input 
-                      type="text" maxLength={6} placeholder="000000" 
-                      className="text-center text-2xl tracking-widest h-14"
-                      value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                      required autoFocus
+                      type="text" 
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      maxLength={6} 
+                      placeholder="000000" 
+                      className="text-center text-3xl font-mono tracking-[0.25em] font-bold h-14 bg-background"
+                      value={otpCode} 
+                      onChange={handleOtpChange}
+                      onFocus={(e) => {
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: "smooth", block: "center" })
+                        }, 250)
+                      }}
+                      required 
+                      autoFocus
                     />
-                    <Button className="w-full h-11" disabled={otpCode.length !== 6} type="submit">Acessar</Button>
+                    <Button className="w-full h-11" disabled={otpCode.length !== 6 || loading} type="submit">
+                      {loading ? "Validando código..." : "Acessar"}
+                    </Button>
                     <Button 
                       type="button" 
                       variant="ghost" 
-                      className="w-full text-muted-foreground hover:text-foreground"
+                      className="w-full text-xs text-muted-foreground hover:text-foreground"
                       onClick={async () => {
                         if (typeof window !== "undefined") {
                           if (user?.id) {

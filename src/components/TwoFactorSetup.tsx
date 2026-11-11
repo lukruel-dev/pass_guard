@@ -349,11 +349,19 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                     </Label>
                     <Input
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
                       maxLength={6}
                       placeholder="000000"
-                      className="text-center text-xl tracking-widest h-11 bg-background"
+                      className="text-center text-2xl font-mono tracking-widest h-12 bg-background font-bold"
                       value={confirmToken}
-                      onChange={(e) => setConfirmToken(e.target.value.replace(/\D/g, ""))}
+                      onChange={(e) => setConfirmToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      onFocus={(e) => {
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: "smooth", block: "center" })
+                        }, 250)
+                      }}
                     />
                   </div>
 
