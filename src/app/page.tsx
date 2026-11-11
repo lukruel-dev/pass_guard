@@ -201,26 +201,43 @@ export default function LoginPage() {
     }
   }
 
-  const handleVerify2FA = (e: React.FormEvent) => {
+  const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!userProfile?.two_factor_secret) {
-      toast({
-        variant: "destructive",
-        title: "Erro de Configuração",
-        description: "Segredo 2FA não encontrado. Entre em contato com o suporte.",
-      })
-      return
-    }
-
     try {
+      // Re-consulta o perfil atualizado do Supabase
+      const { data: freshProfile } = await supabase
+        .from("profiles")
+        .select("two_factor_enabled, two_factor_secret")
+        .eq("id", user?.id)
+        .maybeSingle()
+
+      // Se o 2FA foi desativado no banco pelo usuário/admin, libera acesso direto
+      if (!freshProfile?.two_factor_enabled) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("passguard_2fa_verified", "true")
+        }
+        router.push("/dashboard")
+        return
+      }
+
+      const activeSecret = freshProfile.two_factor_secret || userProfile?.two_factor_secret
+      if (!activeSecret) {
+        toast({
+          variant: "destructive",
+          title: "Erro de Configuração",
+          description: "Segredo 2FA não encontrado. Redefina o 2FA.",
+        })
+        return
+      }
+
       const totp = new OTPAuth.TOTP({
-        secret: userProfile.two_factor_secret
+        secret: activeSecret
       })
       
       const delta = totp.validate({
-        token: otpCode,
-        window: 1 // Permite um delta de 30s
+        token: otpCode.trim(),
+        window: 2 // Permite tolerância de até +/- 60 segundos para compensar relógios
       })
       
       if (delta !== null) {
@@ -236,7 +253,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "Código Inválido",
-          description: "O código informado está incorreto ou expirou.",
+          description: "O código informado está incorreto ou expirou. Verifique o relógio do celular.",
         })
       }
     } catch (err) {
@@ -383,6 +400,20 @@ export default function LoginPage() {
                       required autoFocus
                     />
                     <Button className="w-full h-11" disabled={otpCode.length !== 6} type="submit">Acessar</Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground hover:text-foreground"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          sessionStorage.removeItem("passguard_2fa_verified")
+                        }
+                        await supabase.auth.signOut()
+                        setStep("login")
+                      }}
+                    >
+                      Sair e voltar ao login
+                    </Button>
                   </form>
                 )}
               </>

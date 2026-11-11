@@ -3,6 +3,8 @@
 import * as React from "react"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { ShieldCheck, Smartphone, Download, CheckCircle2, Copy, Check, Trash2, ShieldAlert } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -22,6 +24,7 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   const [step, setStep] = React.useState(1)
   const [copied, setCopied] = React.useState(false)
   const [secret, setSecret] = React.useState("")
+  const [confirmToken, setConfirmToken] = React.useState("")
   const [isEnabled, setIsEnabled] = React.useState(false)
 
   // Carrega status atual do perfil no Supabase
@@ -79,7 +82,33 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
   const handleEnable = async () => {
     if (!user || !secret) return
 
+    if (confirmToken.length !== 6) {
+      toast({
+        variant: "destructive",
+        title: "Código incompleto",
+        description: "Digite o código de 6 dígitos do seu autenticador para confirmar.",
+      })
+      return
+    }
+
     try {
+      const totp = new OTPAuth.TOTP({
+        secret: secret
+      })
+      const delta = totp.validate({
+        token: confirmToken.trim(),
+        window: 2
+      })
+
+      if (delta === null) {
+        toast({
+          variant: "destructive",
+          title: "Código Incorreto",
+          description: "O código digitado não confere com o QR Code. Verifique o relógio do celular e tente novamente.",
+        })
+        return
+      }
+
       const { error } = await supabase
         .from("profiles")
         .upsert({
@@ -248,7 +277,23 @@ export function TwoFactorSetup({ open, onOpenChange }: TwoFactorSetupProps) {
                     </div>
                   </div>
 
-                  <Button className="w-full" onClick={handleEnable}>Confirmar Ativação</Button>
+                  <div className="w-full space-y-2 text-center pt-2 border-t border-border/50">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Passo 3: Digite o código de 6 dígitos gerado no app para ativar:
+                    </Label>
+                    <Input
+                      type="text"
+                      maxLength={6}
+                      placeholder="000000"
+                      className="text-center text-xl tracking-widest h-11 bg-background"
+                      value={confirmToken}
+                      onChange={(e) => setConfirmToken(e.target.value.replace(/\D/g, ""))}
+                    />
+                  </div>
+
+                  <Button className="w-full" disabled={confirmToken.length !== 6} onClick={handleEnable}>
+                    Confirmar e Ativar 2FA
+                  </Button>
                 </div>
               )}
 
