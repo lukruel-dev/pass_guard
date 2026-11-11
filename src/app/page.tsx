@@ -67,6 +67,23 @@ export default function LoginPage() {
   }, [toast])
 
   React.useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handlePopState = () => {
+      // Se estava em telas de registro ou e-mail, volta suavemente para o login inicial
+      if (step === "register" || step === "verify-email") {
+        setStep("login")
+        window.history.pushState(null, "", window.location.pathname)
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [step, setStep])
+
+  React.useEffect(() => {
     async function checkSecurity() {
       if (!user) return
 
@@ -106,10 +123,10 @@ export default function LoginPage() {
             two_factor_enabled: false
           })
         }
-        router.push("/dashboard")
+        router.replace("/dashboard")
       } catch (err) {
         console.error("Erro ao verificar perfil:", err)
-        router.push("/dashboard")
+        router.replace("/dashboard")
       }
     }
 
@@ -199,7 +216,7 @@ export default function LoginPage() {
           title: "Conta Criada",
           description: "Bem-vindo ao PassGuard!",
         })
-        router.push("/dashboard")
+        router.replace("/dashboard")
       }
     } catch (error: any) {
       toast({
@@ -250,7 +267,7 @@ export default function LoginPage() {
         if (typeof window !== "undefined") {
           sessionStorage.setItem("passguard_2fa_verified", "true")
         }
-        router.push("/dashboard")
+        router.replace("/dashboard")
         return
       }
 
@@ -285,7 +302,7 @@ export default function LoginPage() {
           title: "Acesso Autorizado",
           description: "Bem-vindo de volta ao seu cofre.",
         })
-        router.push("/dashboard")
+        router.replace("/dashboard")
       } else {
         toast({
           variant: "destructive",

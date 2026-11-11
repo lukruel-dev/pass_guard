@@ -37,7 +37,7 @@ export function ProfileMenu() {
       localStorage.removeItem("passguard_auth_step")
     }
     await signOut()
-    router.push("/")
+    router.replace("/")
   }
 
   return (

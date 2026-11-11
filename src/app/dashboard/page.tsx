@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const supabase = useSupabase()
-  
+
   const [entries, setEntries] = React.useState<PasswordEntry[]>([])
   const [isEntriesLoading, setIsEntriesLoading] = React.useState(true)
   const [search, setSearch] = React.useState("")
@@ -35,11 +35,42 @@ export default function DashboardPage() {
     }
   }, [user])
 
+  // Trava o botão "Voltar" do celular para não retornar ao Google ou à tela de login
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+
+    // Adiciona uma marcação no histórico para capturar o evento de retorno
+    window.history.pushState({ app: "passguard-dashboard" }, "", window.location.href)
+
+    const handlePopState = () => {
+      // Se houver modal aberto de 2FA, fecha apenas o modal
+      if (show2FASetup) {
+        setShow2FASetup(false)
+        window.history.pushState({ app: "passguard-dashboard" }, "", window.location.href)
+        return
+      }
+
+      // Re-fixa a tela no dashboard e alerta o usuário
+      window.history.pushState({ app: "passguard-dashboard" }, "", window.location.href)
+
+      toast({
+        title: "Sessão Ativa",
+        description: "Você está no cofre seguro. Para sair, use a opção 'Sair' no menu de perfil.",
+      })
+    }
+
+    window.addEventListener("popstate", handlePopState)
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [show2FASetup, toast])
+
   // Redireciona se não estiver logado ou se 2FA não estiver verificado
   React.useEffect(() => {
     async function checkAuthAnd2FA() {
       if (!isUserLoading && !user) {
-        router.push("/")
+        router.replace("/")
         return
       }
 
@@ -58,7 +89,7 @@ export default function DashboardPage() {
               sessionStorage.getItem("passguard_2fa_verified") === "true"
             )
             if (!isVerified) {
-              router.push("/")
+              router.replace("/")
               return
             }
           }
@@ -188,8 +219,8 @@ export default function DashboardPage() {
     }
   }
 
-  const filteredEntries = entries.filter(e => 
-    e.name.toLowerCase().includes(search.toLowerCase()) || 
+  const filteredEntries = entries.filter(e =>
+    e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.username.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -212,9 +243,9 @@ export default function DashboardPage() {
             <span className="font-headline font-bold text-xl tracking-tight">PassGuard</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="flex items-center gap-2 text-muted-foreground hover:text-primary relative px-2 sm:px-3"
               onClick={() => setShow2FASetup(true)}
             >
@@ -224,9 +255,9 @@ export default function DashboardPage() {
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-background shadow-sm" />
               )}
             </Button>
-            
+
             <div className="w-px h-6 bg-border mx-1" />
-            
+
             <ProfileMenu />
           </div>
         </div>
@@ -265,10 +296,10 @@ export default function DashboardPage() {
         {filteredEntries.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEntries.map(entry => (
-              <PasswordCard 
-                key={entry.id} 
-                entry={entry} 
-                onDelete={deleteEntry} 
+              <PasswordCard
+                key={entry.id}
+                entry={entry}
+                onDelete={deleteEntry}
               />
             ))}
           </div>
@@ -282,20 +313,20 @@ export default function DashboardPage() {
               {search ? "Tente outro termo de busca" : "Adicione sua primeira senha para começar"}
             </p>
             {!search && (
-               <div className="mt-6">
-                 <PasswordForm onAdd={addEntry} />
-               </div>
+              <div className="mt-6">
+                <PasswordForm onAdd={addEntry} />
+              </div>
             )}
           </div>
         )}
       </main>
 
-      <TwoFactorSetup 
-        open={show2FASetup} 
+      <TwoFactorSetup
+        open={show2FASetup}
         onOpenChange={(open) => {
           setShow2FASetup(open)
           if (!open) loadProfile()
-        }} 
+        }}
       />
     </div>
   )
