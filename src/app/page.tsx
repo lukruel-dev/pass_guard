@@ -21,6 +21,8 @@ export default function LoginPage() {
   const [loading, setLoading] = React.useState(false)
   const [step, setStepState] = React.useState<"login" | "2fa" | "register" | "verify-email">(() => {
     if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get("step") === "2fa") return "2fa"
       const saved = localStorage.getItem("passguard_auth_step")
       if (saved === "2fa" || saved === "verify-email") return saved as any
     }
@@ -306,13 +308,15 @@ export default function LoginPage() {
     window.location.hash.includes("access_token=")
   )
 
-  if (isUserLoading || isAuthCodeInUrl) {
+  // Se o usuário já está autenticado e não precisa passar por 2FA/e-mail,
+  // evita piscar o formulário de login enquanto redireciona para o cofre
+  if (isUserLoading || isAuthCodeInUrl || (user && step !== "2fa" && step !== "verify-email")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <KeyRound className="w-12 h-12 text-primary animate-pulse" />
           <p className="text-muted-foreground animate-pulse">
-            {isAuthCodeInUrl ? "Autenticando com Google..." : "Sincronizando Cofre com Supabase..."}
+            {isAuthCodeInUrl ? "Autenticando com Google..." : "Abrindo cofre de segurança..."}
           </p>
         </div>
       </div>
