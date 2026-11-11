@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.hosted.us_central1.passguard__passguard_c6357.twa",
+    "sha256_cert_fingerprints": ["DC:D3:5D:D6:EB:D5:49:7D:EC:B8:29:45:35:0F:0E:D6:D9:9B:C7:5B:EA:69:D3:05:80:9B:EB:08:01:97:16:34"]
+  }
+}]

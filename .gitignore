@@ -47,8 +47,8 @@ client_secret*.json
 credentials*.json
 service-account*.json
 *.keystore
-*.aab
-*.apk
+*.idsig
+local.properties
 
 # firebase
 firebase-debug.log
